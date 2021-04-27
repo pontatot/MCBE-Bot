@@ -1,8 +1,9 @@
-import discord, time, json, asyncio, random
+import discord, time, json
 client = discord.Client()
 f = open("infos.json", "r")
 infos = json.load(f)
 act = infos["status"]
+owner = infos["owner"]
 f = open("token.txt", "r")
 TOKEN = f.read()
 f = open("app.txt", "r")
@@ -75,7 +76,7 @@ async def on_message(message):
     if message.guild:
         #message sent by muted?
         if infoguild["muted"]:
-            if message.author.id in infoguild["muted"] and message.author.id != 630919091015909386 and message.author.roles[-1].name not in admin:
+            if message.author.id in infoguild["muted"] and message.author.id != owner and message.author.roles[-1].name not in admin:
                 await message.channel.purge(limit=1)
                 return
         #bot stuff
@@ -116,7 +117,7 @@ async def on_message(message):
             #say something
             elif messlist[0] == p + "say":
                 await message.channel.purge(limit=1)
-                if message.author.roles[-1].id in admin or message.author.id == 688103770424606818 or message.author.id == 630919091015909386:
+                if message.author.roles[-1].id in admin or message.author.id == owner:
                     await message.channel.send(sortname(messlist))
                 elif "@everyone" not in message.content and "@here" not in message.content and "<@&" not in message.content:
                     await message.channel.send(message.author.name + ": " + sortname(messlist))
@@ -127,7 +128,7 @@ async def on_message(message):
                 await message.channel.purge(limit=1)
                 await message.author.edit(nick=sortname(messlist))
             #admin commands
-            if message.author.roles[-1].id in admin or message.author.id == 688103770424606818 or message.author.id == 630919091015909386:
+            if message.author.roles[-1].id in admin or message.author.id == owner:
                 #clear messages
                 if messlist[0] == p + "clear":
                     await message.channel.purge(limit=1)
@@ -349,7 +350,7 @@ async def on_message(message):
         elif messlist[0] == p + "trailer":
             await message.channel.send("https://youtu.be/dNfiFiI6yI0")
         #owner commands
-        if message.author.id == 630919091015909386 or message.author.id == 688103770424606818:
+        if message.author.id == owner:
             #change status
             if messlist[0] == p + "status":
                 statuspron = ["p", "s", "l", "w"]
