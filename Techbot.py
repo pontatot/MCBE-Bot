@@ -72,8 +72,10 @@ async def on_message(message):
             if messlist[0] == str(prefix[i] + messlist[0].split(prefix[i])[1]):
                 p = prefix[i]
                 break
-        else:
+            else:
                 p = "TT"
+        else:
+            p = "TT"
     #logs
     try:
         print(f"{message.guild.name} - {message.channel.name} - {message.author.name}: {message.content}")
@@ -308,10 +310,6 @@ async def on_message(message):
                     json.dump(infoguild, f)
                     f.close()
                     await message.channel.send("editing nick")
-                #ghost ping
-                elif messlist[0] == p + "ghost":
-                    await message.channel.send(f"<@{int(messlist[1])}><@&{int(messlist[1])}>")
-                    await message.channel.purge(limit=2)
                 #custom commands
                 elif messlist[0] == p + "command":
                     if messlist[1] not in infoguild["command"][0]:
@@ -339,7 +337,7 @@ async def on_message(message):
                                 break
                 #setup
                 elif messlist[0] == p + "setup":
-                    embed = discord.Embed(title="SETUP help page", description=f"prefix: {p}", colour=infoguild["color"])
+                    embed = discord.Embed(title="SETUP help page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
                     for i in range(len(infos["help"][2])):
                         embed.add_field(name=p + infos["help"][2][i].split("|")[0], value=infos["help"][2][i].split("|")[1])
                     adminlist = ""
@@ -436,12 +434,12 @@ async def on_message(message):
     if p in messlist[0]:
         #help page
         if message.content == p + "help":
-            embed = discord.Embed(title="Help page", description=f"prefix: {p}", colour=infoguild["color"])
+            embed = discord.Embed(title="Help page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
             for i in range(len(infos["help"][0])):
                 embed.add_field(name=p + infos["help"][0][i].split("|")[0], value=infos["help"][0][i].split("|")[1])
             await message.channel.send(content=None, embed=embed)
         elif message.content == p + "dm":
-            embed = discord.Embed(title="DM Help page", description=f"prefix: {p}", colour=infoguild["color"])
+            embed = discord.Embed(title="DM Help page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
             for i in range(len(infos["help"][1])):
                 embed.add_field(name=p + infos["help"][1][i].split("|")[0], value=infos["help"][1][i].split("|")[1])
             await message.channel.send(content=None, embed=embed)
