@@ -62,21 +62,29 @@ async def on_message(message):
     else:
         f = open("guilds/default.json", "r")
         infoguild = json.load(f)
-    p = infoguild["prefix"]
+    prefix = infoguild["prefix"]
     admin = infoguild["admins"]
     #cut message into list
     messlist = list(message.content.split(" "))
+    #determine prefix
+    for i in range(len(prefix)):
+        if prefix[i] in messlist[0]:
+            if messlist[0] == str(prefix[i] + messlist[0].split(prefix[i])[1]):
+                p = prefix[i]
+                break
+        else:
+                p = "TT"
     #logs
     try:
         print(f"{message.guild.name} - {message.channel.name} - {message.author.name}: {message.content}")
     except:
-        print(f"dm - {message.channel.name} - {message.author.name}: {message.content}")
+        print(f"dm - {message.author.name}: {message.content}")
 
     #server message
     if message.guild:
         #message sent by muted?
         if infoguild["muted"]:
-            if message.author.id in infoguild["muted"] and message.author.id != owner and message.author.roles[-1].name not in admin:
+            if message.author.id in infoguild["muted"] and message.author.id not in owner and message.author.roles[-1].name not in admin:
                 await message.channel.purge(limit=1)
                 return
         #bot stuff
@@ -109,6 +117,53 @@ async def on_message(message):
             return
         #commands
         if p in messlist[0]:
+            #owner commands
+            if message.author.id in owner:
+                #change status
+                if messlist[0] == p + "status":
+                    statuspron = ["p", "s", "l", "w"]
+                    for i in range(4):
+                        if messlist[1] == statuspron[i]:
+                            messlist[1] = i
+                    infos["status"][0] = messlist[1]
+                    infos["status"][1] = sortname(messlist, 2)
+                    f = open("infos.json", "w", encoding = "utf-8")
+                    json.dump(infos, f)
+                    f.close()
+                    if messlist[1] == 0:
+                        await client.change_presence(activity=discord.Game(sortname(messlist, 2)))
+                    elif messlist[1] == 1:
+                        act2 = ""
+                        for i in range(2, len(messlist) - 1):
+                            act2 = act2 + messlist[i] + " "
+                        await client.change_presence(activity=discord.Streaming(name=act2, url=messlist[-1]))
+                    elif messlist[1] == 2:
+                        await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=sortname(messlist, 2)))
+                    elif messlist[1] == 3:
+                        await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=sortname(messlist, 2)))
+                    else:
+                        await client.change_presence(activity=discord.Game('on TechTonic SMP'))
+                #commands
+                elif messlist[0] == p + "clearcommand":
+                    try:
+                        await message.channel.purge(limit=1)
+                        infoguild["command"] = [[], [], []]
+                        f = open(f"guilds/{message.guild.id}.json", "w")
+                        json.dump(infoguild, f)
+                        embed = discord.Embed(title="succesfully removed all commands", description="", colour=infoguild["color"])
+                        await message.channel.send(content=None, embed=embed)
+                    except:
+                        await message.channel.send("uhh")
+                #updates
+                elif messlist[0] == p + "update":
+                    f = open("guilds/default.json", "r")
+                    infos2 = json.load(f)
+                    for i in infoguild:
+                        infos2[i] = infoguild[i]
+                    f = open(f"guilds/{message.guild.id}.json", "w")
+                    json.dump(infos2, f)
+                    f.close()
+                    await message.channel.send("server updated")
             #number of users
             if message.content == p + "users" or message.content == p + "members":
                 await message.channel.purge(limit=1)    
@@ -117,7 +172,7 @@ async def on_message(message):
             #say something
             elif messlist[0] == p + "say":
                 await message.channel.purge(limit=1)
-                if message.author.roles[-1].id in admin or message.author.id == owner:
+                if message.author.roles[-1].id in admin or message.author.id in owner:
                     await message.channel.send(sortname(messlist))
                 elif "@everyone" not in message.content and "@here" not in message.content and "<@&" not in message.content:
                     await message.channel.send(message.author.name + ": " + sortname(messlist))
@@ -127,8 +182,16 @@ async def on_message(message):
             elif messlist[0] == p + "nick":
                 await message.channel.purge(limit=1)
                 await message.author.edit(nick=sortname(messlist))
+            #custom commands
+            for i in range(len(infoguild["command"][0])):
+                if messlist[0] == p + infoguild["command"][0][i]:
+                    if infoguild["command"][2][i] == 0:
+                        await message.channel.send(infoguild["command"][1][i])
+                    else:
+                        embed = discord.Embed(title="", description=infoguild["command"][1][i], colour=infoguild["color"])
+                        await message.channel.send(content=None, embed=embed)
             #admin commands
-            if message.author.roles[-1].id in admin or message.author.id == owner:
+            if message.author.roles[-1].id in admin or message.author.id in owner:
                 #clear messages
                 if messlist[0] == p + "clear":
                     await message.channel.purge(limit=1)
@@ -233,6 +296,10 @@ async def on_message(message):
                     await message.channel.purge(limit=1)
                     for i in range(int(messlist[1])):
                         await message.channel.send(sortname(messlist, 2))
+                #ghost ping
+                elif messlist[0] == p + "ghost":
+                    await message.channel.send(f"<@{int(messlist[1])}><@&{int(messlist[1])}>")
+                    await message.channel.purge(limit=2)
                 #botnick
                 elif messlist[0] == p + "botnick":
                     await message.channel.purge(limit=1)
@@ -241,6 +308,35 @@ async def on_message(message):
                     json.dump(infoguild, f)
                     f.close()
                     await message.channel.send("editing nick")
+                #ghost ping
+                elif messlist[0] == p + "ghost":
+                    await message.channel.send(f"<@{int(messlist[1])}><@&{int(messlist[1])}>")
+                    await message.channel.purge(limit=2)
+                #custom commands
+                elif messlist[0] == p + "command":
+                    if messlist[1] not in infoguild["command"][0]:
+                        infoguild["command"][0].append(messlist[1])
+                        if messlist[2] != "embed":
+                            infoguild["command"][1].append(sortname(messlist, 2))
+                            infoguild["command"][2].append(0)
+                            embed = discord.Embed(title="successfully added", description=f"**{p}{messlist[1]}**\n{sortname(messlist, 2)}", colour=infoguild["color"])
+                        else:
+                            infoguild["command"][1].append(sortname(messlist, 3))
+                            infoguild["command"][2].append(1)
+                            embed = discord.Embed(title="successfully added", description=f"**{p}{messlist[1]}**\n{sortname(messlist, 3)}\n as embed", colour=infoguild["color"])
+                        f = open(f"guilds/{message.guild.id}.json", "w")
+                        json.dump(infoguild, f)
+                        await message.channel.send(content=None, embed=embed)
+                elif messlist[0] == p + "removecommand":
+                    if messlist[1] in infoguild["command"][0]:
+                        for i in range(len(infoguild["command"][0])):
+                            if messlist[1] == infoguild["command"][0][i]:
+                                infoguild["command"][0].pop(i)
+                                infoguild["command"][1].pop(i)
+                                infoguild["command"][2].pop(i)
+                                embed = discord.Embed(title="successfully removed", description=f"**{p}{messlist[1]}**", colour=infoguild["color"])
+                                await message.channel.send(content=None, embed=embed)
+                                break
                 #setup
                 elif messlist[0] == p + "setup":
                     embed = discord.Embed(title="SETUP help page", description=f"prefix: {p}", colour=infoguild["color"])
@@ -258,12 +354,23 @@ async def on_message(message):
                     f.close()
                     embed = discord.Embed(title="", description=infoguild['color'], colour=infoguild["color"])
                     await message.channel.send(content=f"color has been changed to:", embed=embed)
-                elif messlist[0] == p + "prefix":
-                    infoguild["prefix"] = messlist[1]
-                    f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                    json.dump(infoguild, f)
-                    f.close()
-                    await message.channel.send(f'prefix has been changed to {infoguild["prefix"]}')
+                elif messlist[0] == p + "prefixadd":
+                    if messlist[0] not in infoguild["prefix"]:
+                        infoguild["prefix"].append(messlist[1])
+                        f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
+                        json.dump(infoguild, f)
+                        f.close()
+                        await message.channel.send(f'added {messlist[1]} to prefixes')
+                elif messlist[0] == p + "prefixremove":
+                    if messlist[1] in infoguild["prefix"] and len(infoguild["prefix"]) > 1:
+                        for i in range(len(infoguild["prefix"])):
+                            if messlist[0] == infoguild["prefix"][i]:
+                                infoguild["prefix"].pop(i)
+                                break
+                        f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
+                        json.dump(infoguild, f)
+                        f.close()
+                        await message.channel.send(f'removed {messlist[1]} to prefixes')
                 elif messlist[0] == p + "op":
                     infoguild["admins"].append(int(messlist[1]))
                     f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
@@ -349,31 +456,5 @@ async def on_message(message):
         #trailer
         elif messlist[0] == p + "trailer":
             await message.channel.send("https://youtu.be/dNfiFiI6yI0")
-        #owner commands
-        if message.author.id == owner:
-            #change status
-            if messlist[0] == p + "status":
-                statuspron = ["p", "s", "l", "w"]
-                for i in range(4):
-                    if messlist[1] == statuspron[i]:
-                        messlist[1] = i
-                infos["status"][0] = messlist[1]
-                infos["status"][1] = sortname(messlist, 2)
-                f = open("infos.json", "w", encoding = "utf-8")
-                json.dump(infos, f)
-                f.close()
-                if messlist[1] == 0:
-                    await client.change_presence(activity=discord.Game(sortname(messlist, 2)))
-                elif messlist[1] == 1:
-                    act2 = ""
-                    for i in range(2, len(messlist) - 1):
-                        act2 = act2 + messlist[i] + " "
-                    await client.change_presence(activity=discord.Streaming(name=act2, url=messlist[-1]))
-                elif messlist[1] == 2:
-                    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=sortname(messlist, 2)))
-                elif messlist[1] == 3:
-                    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=sortname(messlist, 2)))
-                else:
-                    await client.change_presence(activity=discord.Game('on TechTonic SMP'))
 
 client.run(TOKEN)
