@@ -295,6 +295,24 @@ async def on_message(message):
                     except:
                         embed = discord.Embed(title="", description=sortname(messlist), colour=infoguild["color"])
                     await message.channel.send(content=None, embed=embed)
+                #edit
+                elif messlist[0] == p + "edit":
+                    await message.channel.purge(limit=1)
+                    if messlist[1] != "embed":
+                        channel = client.get_channel(int(messlist[1]))
+                        message = await channel.fetch_message(int(messlist[2]))
+                        await message.edit(content=sortname(messlist, 3))
+                    else:
+                        channel = client.get_channel(int(messlist[2]))
+                        message = await channel.fetch_message(int(messlist[3]))
+                        try:
+                            color = int(messlist[4])
+                            for i in range(5, len(messlist)):
+                                name += messlist[i] + " "
+                            embed = discord.Embed(title="", description=sortname(messlist, 6), colour=color)
+                        except:
+                            embed = discord.Embed(title="", description=sortname(messlist, 5), colour=infoguild["color"])
+                        await message.edit(content=None, embed=embed)
                 #spam
                 elif messlist[0] == p + "spam":
                     await message.channel.purge(limit=1)
