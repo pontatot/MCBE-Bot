@@ -118,6 +118,8 @@ async def on_message(message):
                     f.close()
             return
         #commands
+        if message.content.strip(" ") == "<@782922227397689345>" or message.content.strip(" ") == "<@!782922227397689345>":
+            await message.channel.send(f"my prefix are {infoguild['prefix']}")
         if p in messlist[0]:
             #owner commands
             if message.author.id in owner:
