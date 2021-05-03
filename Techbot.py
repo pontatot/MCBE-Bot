@@ -12,11 +12,22 @@ application = f.read().split("|")
 client = discord.Client()
 
 #utility
-def sortname(message, init=1):
+def sortname(message, init=1, end=None):
+    if not end:
+        end = len(message)
     name = ""
-    for i in range(init, len(message)):
+    for i in range(init, end):
         name += message[i] + " "
     return name
+def getid(message):
+    try:
+        id = ""
+        for i in message:
+            if i not in "<@&!#>":
+                id += i
+        return int(id)
+    except:
+        return None
 
 
 @client.event
@@ -177,7 +188,11 @@ async def on_message(message):
             elif messlist[0] == p + "say":
                 await message.channel.purge(limit=1)
                 if message.author.roles[-1].id in admin or message.author.id in owner:
-                    await message.channel.send(sortname(messlist))
+                    try:
+                        channel = client.get_channel(getid(messlist[1]))
+                        await channel.send(sortname(messlist, 2))
+                    except:
+                        await message.channel.send(sortname(messlist))
                 elif "@everyone" not in message.content and "@here" not in message.content and "<@&" not in message.content:
                     await message.channel.send(message.author.name + ": " + sortname(messlist))
                 else:
@@ -225,94 +240,66 @@ async def on_message(message):
                             await message.channel.send("voting channel missing")
                 #mute
                 elif messlist[0] == p + "mute":
-                    try:
-                        mute = int(messlist[1])
-                        if mute not in infoguild["muted"]:
-                            infoguild["muted"].append(mute)
-                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                            json.dump(infoguild, f)
-                            f.close()
-                            embed = discord.Embed(title="", description=f"<@{int(mute)}> has been stfu-ed", colour=infoguild["color"])
-                            await message.channel.send(content=None, embed=embed)
-                    except:
-                        name = ""
-                        for i in messlist[1]:
-                            if i not in "<@!>":
-                                name += i
-                        if int(name) not in infoguild["muted"]:
-                            infoguild["muted"].append(int(name))
+                    if getid(messlist[1]) not in infoguild["muted"]:
+                        infoguild["muted"].append(getid(messlist[1]))
+                        f = open(f"guilds/{message.guild.id}.json", "w")
+                        json.dump(infoguild, f)
+                        f.close()
+                        embed = discord.Embed(title="", description=f"<@{getid(messlist[1])}> has been stfu-ed", colour=infoguild["color"])
+                        await message.channel.send(content=None, embed=embed)
+                #unmute
+                elif messlist[0] == p + "unmute":
+                    if message.content == "TTunmute all":
+                        infoguild["muted"] = []
+                        f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
+                        json.dump(infoguild, f)
+                        f.close()
+                        embed = discord.Embed(title="", description=f"everyone has been un-stfu-ed", colour=infoguild["color"])
+                        await message.channel.send(content=None, embed=embed)
+                    else:
+                        if getid(messlist[1]) in infoguild["muted"]:
+                            for i in range(len(infoguild["muted"])):
+                                if getid(messlist[1]) == infoguild["muted"][i]:
+                                    infoguild["muted"].pop(i)
+                                    break
                             f = open(f"guilds/{message.guild.id}.json", "w")
                             json.dump(infoguild, f)
                             f.close()
-                            embed = discord.Embed(title="", description=f"<@{int(name)}> has been stfu-ed", colour=infoguild["color"])
+                            embed = discord.Embed(title="", description=f"<@{getid(messlist[1])}> has been un-stfu-ed", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
-                #unmute
-                elif messlist[0] == p + "unmute":
-                    try:
-                        mute = int(messlist[1])
-                        if mute in infoguild["muted"]:
-                            for i in range(len(infoguild["muted"])):
-                                if mute == infoguild["muted"][i]:
-                                    infoguild["muted"].pop(i)
-                                    break
-                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                            json.dump(infoguild, f)
-                            f.close()
-                            embed = discord.Embed(title="", description=f"<@{int(mute)}> has been un-stfu-ed", colour=infoguild["color"])
-                            await message.channel.send(content=None, embed=embed)
-                    except:
-                        if message.content == "TTunmute all":
-                            infoguild["muted"] = []
-                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                            json.dump(infoguild, f)
-                            f.close()
-                            embed = discord.Embed(title="", description=f"<@{int(mute)}> has been un-stfu-ed", colour=infoguild["color"])
-                            await message.channel.send(content=None, embed=embed)
-                        else:
-                            name = ""
-                            for i in messlist[1]:
-                                if i not in "<@!>":
-                                    name += i
-                            mute = int(name)
-                            if mute in infoguild["muted"]:
-                                for i in range(len(infoguild["muted"])):
-                                    if mute == infoguild["muted"][i]:
-                                        infoguild["muted"].pop(i)
-                                        break
-                                f = open(f"guilds/{message.guild.id}.json", "w")
-                                json.dump(infoguild, f)
-                                f.close()
-                                embed = discord.Embed(title="", description=f"<@{int(mute)}> has been un-stfu-ed", colour=infoguild["color"])
-                                await message.channel.send(content=None, embed=embed)
                 #embeds
                 elif messlist[0] == p + "embed":
                     await message.channel.purge(limit=1)
                     try:
-                        color = int(messlist[1])
-                        for i in range(2, len(messlist)):
-                            name += messlist[i] + " "
-                        embed = discord.Embed(title="", description=sortname(messlist, 2), colour=color)
+                        channel = client.get_channel(getid(messlist[1]))
+                        embed = discord.Embed(title="", description=sortname(messlist, 2), colour=infoguild["color"])
+                        await channel.send(content=None, embed=embed)
                     except:
                         embed = discord.Embed(title="", description=sortname(messlist), colour=infoguild["color"])
-                    await message.channel.send(content=None, embed=embed)
+                        await message.channel.send(content=None, embed=embed)
                 #edit
                 elif messlist[0] == p + "edit":
                     await message.channel.purge(limit=1)
                     if messlist[1] != "embed":
-                        channel = client.get_channel(int(messlist[1]))
-                        message = await channel.fetch_message(int(messlist[2]))
-                        await message.edit(content=sortname(messlist, 3))
+                        if len(messlist[1].split("/")) == 7:
+                            channel = client.get_channel(int(messlist[1].split("/")[5]))
+                            message = await channel.fetch_message(int(messlist[1].split("/")[6]))
+                            await message.edit(content=sortname(messlist, 2))
+                        else:
+                            channel = client.get_channel(int(messlist[1]))
+                            message = await channel.fetch_message(int(messlist[2]))
+                            await message.edit(content=sortname(messlist, 3))
                     else:
-                        channel = client.get_channel(int(messlist[2]))
-                        message = await channel.fetch_message(int(messlist[3]))
-                        try:
-                            color = int(messlist[4])
-                            for i in range(5, len(messlist)):
-                                name += messlist[i] + " "
-                            embed = discord.Embed(title="", description=sortname(messlist, 6), colour=color)
-                        except:
-                            embed = discord.Embed(title="", description=sortname(messlist, 5), colour=infoguild["color"])
-                        await message.edit(content=None, embed=embed)
+                        if len(messlist[2].split("/")) == 7:
+                            channel = client.get_channel(int(messlist[2].split("/")[5]))
+                            message = await channel.fetch_message(int(messlist[2].split("/")[6]))
+                            embed = discord.Embed(title="", description=sortname(messlist, 3), colour=infoguild["color"])
+                            await message.edit(content=None, embed=embed)
+                        else:
+                            channel = client.get_channel(int(messlist[2]))
+                            message = await channel.fetch_message(int(messlist[3]))
+                            embed = discord.Embed(title="", description=sortname(messlist, 4), colour=infoguild["color"])
+                            await message.edit(content=None, embed=embed)
                 #spam
                 elif messlist[0] == p + "spam":
                     await message.channel.purge(limit=1)
@@ -390,27 +377,27 @@ async def on_message(message):
                         f.close()
                         await message.channel.send(f'removed {messlist[1]} to prefixes')
                 elif messlist[0] == p + "op":
-                    infoguild["admins"].append(int(messlist[1]))
+                    infoguild["admins"].append(int(getid(messlist[1])))
                     f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
                     json.dump(infoguild, f)
                     f.close()
-                    embed = discord.Embed(title="", description=f"<@&{int(messlist[1])}>", colour=infoguild["color"])
+                    embed = discord.Embed(title="", description=f"<@&{getid(messlist[1])}>", colour=infoguild["color"])
                     await message.channel.send(content=f"made admin", embed=embed)
                 elif messlist[0] == p + "unop":
                     for i in range(len(infoguild["admins"])):
-                        if int(infoguild["admins"][i]) == int(messlist[1]):
+                        if int(infoguild["admins"][i]) == getid(messlist[1]):
                             infoguild["admins"].pop(i)
                     f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
                     json.dump(infoguild, f)
                     f.close()
-                    embed = discord.Embed(title="", description=f"<@&{int(messlist[1])}>", colour=infoguild["color"])
+                    embed = discord.Embed(title="", description=f"<@&{getid(messlist[1])}>", colour=infoguild["color"])
                     await message.channel.send(content=f"removed admin", embed=embed)
                 elif messlist[0] == p + "setvote":
                     if messlist[1] == "app" or messlist[1] == "application":
-                        infoguild["vote"][1] = int(messlist[2])
+                        infoguild["vote"][1] = getid(messlist[2])
                         await message.channel.send(f"set application voting channel to <#{int(infoguild['vote'][1])}>")
                     else:
-                        infoguild["vote"][0] = int(messlist[1])
+                        infoguild["vote"][0] = getid(messlist[1])
                         await message.channel.send(f"set voting channel to <#{int(infoguild['vote'][0])}>")
                     f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
                     json.dump(infoguild, f)
@@ -420,13 +407,12 @@ async def on_message(message):
                         infoguild["welcome"][2] = sortname(messlist, 2)
                         await message.channel.send(f"set welcome message to {infoguild['welcome'][2]}")
                     else:
-                        infoguild["welcome"][0] = int(messlist[1])
+                        infoguild["welcome"][0] = getid(messlist[1])
                         infoguild["welcome"][1] = sortname(messlist, 2)
                         await message.channel.send(f"set welcoming from <@{int(infoguild['welcome'][0])}> with {infoguild['welcome'][1]}")
                     f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
                     json.dump(infoguild, f)
                     f.close()
-
     #dms
     else:
         #say
