@@ -57,6 +57,8 @@ async def on_message(message):
     f = open("infos.json", "r", encoding = "utf-8")
     infos = json.load(f)
     f.close()
+    f = open("help.json", "r")
+    infos["help"] = json.load(f)
     if message.guild:
         try:
             f = open(f"guilds/{message.guild.id}.json", "r")
