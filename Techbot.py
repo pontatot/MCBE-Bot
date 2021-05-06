@@ -437,9 +437,13 @@ async def on_message(message):
 
     #fun
     if "782922227397689345" in message.content:
-        await message.add_reaction("<:pepogun:819303119489597470>")
+        #await message.add_reaction("<:pepogun:819303119489597470>")
+        await message.channel.send("https://tenor.com/view/discord-ping-discord-ping-i-got-pinged-reeee-gif-17313380")
     #everywhere commands
     if p in messlist[0]:
+        #ping
+        if message.content == p + "ping":
+            await message.channel.send(f"{round(client.latency * 1000)} ms")
         #help page
         if message.content == p + "help":
             embed = discord.Embed(title="Help page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
