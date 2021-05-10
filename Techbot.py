@@ -284,24 +284,45 @@ async def on_message(message):
                     await message.channel.purge(limit=1)
                     if messlist[1] != "embed":
                         if len(messlist[1].split("/")) == 7:
-                            channel = client.get_channel(int(messlist[1].split("/")[5]))
-                            message = await channel.fetch_message(int(messlist[1].split("/")[6]))
-                            await message.edit(content=sortname(messlist, 2))
+                            try:
+                                channel = client.get_channel(int(messlist[1].split("/")[5]))
+                                message2 = await channel.fetch_message(int(messlist[1].split("/")[6]))
+                                await message2.edit(content=sortname(messlist, 2))
+                            except:
+                                await message.channel.send("could not find message")
                         else:
-                            channel = client.get_channel(int(messlist[1]))
-                            message = await channel.fetch_message(int(messlist[2]))
-                            await message.edit(content=sortname(messlist, 3))
+                            try:
+                                channel = client.get_channel(int(messlist[1]))
+                                message2 = await channel.fetch_message(int(messlist[2]))
+                                await message2.edit(content=sortname(messlist, 3))
+                            except:
+                                await message.channel.send("could not find message")
                     else:
                         if len(messlist[2].split("/")) == 7:
-                            channel = client.get_channel(int(messlist[2].split("/")[5]))
-                            message = await channel.fetch_message(int(messlist[2].split("/")[6]))
-                            embed = discord.Embed(title="", description=sortname(messlist, 3), colour=infoguild["color"])
-                            await message.edit(content=None, embed=embed)
+                            try:
+                                channel = client.get_channel(int(messlist[2].split("/")[5]))
+                                message2 = await channel.fetch_message(int(messlist[2].split("/")[6]))
+                                embed = discord.Embed(title="", description=sortname(messlist, 3), colour=infoguild["color"])
+                                await message2.edit(content=None, embed=embed)
+                            except:
+                                await message.channel.send("could not find message")
                         else:
                             channel = client.get_channel(int(messlist[2]))
                             message = await channel.fetch_message(int(messlist[3]))
                             embed = discord.Embed(title="", description=sortname(messlist, 4), colour=infoguild["color"])
                             await message.edit(content=None, embed=embed)
+                #react
+                elif messlist[0] == p + "react":
+                    await message.channel.purge(limit=1)
+                    try:
+                        channel = client.get_channel(int(messlist[1].split("/")[5]))
+                        message2 = await channel.fetch_message(int(messlist[1].split("/")[6]))
+                        try:
+                            await message2.add_reaction(messlist[2])
+                        except:
+                            await message.channel.send("could not find emoji")
+                    except:
+                        await message.channel.send("could not find the message")
                 #spam
                 elif messlist[0] == p + "spam":
                     await message.channel.purge(limit=1)
