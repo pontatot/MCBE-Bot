@@ -323,6 +323,27 @@ async def on_message(message):
                             await message.channel.send("could not find emoji")
                     except:
                         await message.channel.send("could not find the message")
+                #kick
+                elif messlist[0] == p + "kick":
+                    user = client.get_user(getid(messlist[1]))
+                    if user.roles[-1].id in admin or user.id in owner:
+                        await message.channel.send("Can't kick admins")
+                    else:
+                        await message.channel.send(f"<@{getid(messlist[1])}> has been kicked for: {sortname(messlist, 2)}")
+                        await message.guild.kick(user, reason=sortname(messlist, 2))
+                #ban
+                elif messlist[0] == p + "ban":
+                    user = client.get_user(getid(messlist[1]))
+                    if user.roles[-1].id in admin or user.id in owner:
+                        await message.channel.send("Can't ban admins")
+                    else:
+                        await message.channel.send(f"<@{getid(messlist[1])}> has been banned for: {sortname(messlist, 2)}")
+                        await message.guild.ban(user, reason=sortname(messlist, 2))
+                #unban
+                elif messlist[0] == p + "unban":
+                    user = client.get_user(getid(messlist[1]))
+                    await message.channel.send(f"<@{getid(messlist[1])}> has been unbanned")
+                    await message.guild.unban(user)
                 #spam
                 elif messlist[0] == p + "spam":
                     await message.channel.purge(limit=1)
