@@ -326,7 +326,7 @@ async def on_message(message):
                 #kick
                 elif messlist[0] == p + "kick":
                     user = client.get_user(getid(messlist[1]))
-                    if user.roles[-1].id in admin or user.id in owner:
+                    if user.id in owner:
                         await message.channel.send("Can't kick admins")
                     else:
                         await message.channel.send(f"<@{getid(messlist[1])}> has been kicked for: {sortname(messlist, 2)}")
@@ -334,7 +334,7 @@ async def on_message(message):
                 #ban
                 elif messlist[0] == p + "ban":
                     user = client.get_user(getid(messlist[1]))
-                    if user.roles[-1].id in admin or user.id in owner:
+                    if user.id in owner:
                         await message.channel.send("Can't ban admins")
                     else:
                         await message.channel.send(f"<@{getid(messlist[1])}> has been banned for: {sortname(messlist, 2)}")
