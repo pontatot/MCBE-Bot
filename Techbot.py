@@ -508,5 +508,8 @@ async def on_message(message):
         #trailer
         elif messlist[0] == p + "trailer":
             await message.channel.send("https://youtu.be/dNfiFiI6yI0")
+        #pack
+        elif messlist[0] == p + "pack":
+            await message.channel.send(file=discord.File("TTpack.mcpack"))
 
 client.run(TOKEN)
