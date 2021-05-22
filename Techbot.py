@@ -26,6 +26,24 @@ def getid(message):
         return int(id)
     except:
         return None
+def openconfig(id="default"):
+    try:
+        f = open(f"guilds/{id}.json", "r", encoding = "utf-8")
+        infoguild = json.load(f)
+    except:
+        #initialization
+        f = open("guilds/default.json", "r", encoding = "utf-8")
+        default = json.load(f)
+        infoguild = default
+        f.close()
+        f = open(f"guilds/{id}.json", "w", encoding = "utf-8")
+        json.dump(default, f)
+        f.close()
+    return infoguild
+def saveconfig(infoguild, id):
+    f = open(f"guilds/{id}.json", "w", encoding = "utf-8")
+    json.dump(infoguild, f)
+    f.close()
 
 class MyClient(discord.Client):
     async def on_ready(self):
@@ -44,14 +62,16 @@ class MyClient(discord.Client):
         elif act[0] == 3:
             await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=infos["status"][1]))
             print(f"{self.user} is connected as watching {infos['status'][1]}")
+        elif act[0] == 4:
+            await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"{len(self.guilds)} servers"))
+            print(f"{self.user} is connected as watching {len(self.guilds)} servers")
         else:
             await self.change_presence(activity=discord.Game('on TechTonic SMP'))
             print(f"{self.user} is connected as nope")
 
     async def on_member_join(self, member):
         guild = member.guild
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if guild.system_channel is not None:
             if infoguild["welcome"][0]:
                 to_send = infoguild["welcome"][0].replace("{ping}", member.mention).replace("{mention}", member.mention).replace("{name}", member.name).replace("{guild}", guild.name).replace("{number}", str(guild.member_count))
@@ -69,8 +89,7 @@ class MyClient(discord.Client):
     
     async def on_member_remove(self, member):
         guild = member.guild
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if guild.system_channel is not None:
             if infoguild["welcome"][1]:
                 to_send = infoguild["welcome"][1].replace("{ping}", member.mention).replace("{mention}", member.mention).replace("{name}", member.name).replace("{guild}", guild.name).replace("{number}", str(guild.member_count))
@@ -84,8 +103,7 @@ class MyClient(discord.Client):
 
     async def on_member_update(self, before, after):
         guild = before.guild
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if infoguild["logs"][0] != 0:
             channel = self.get_channel(infoguild["logs"][0])
             if infoguild["logs"][1]["nick"] == 1 and before.nick != after.nick:
@@ -113,8 +131,7 @@ class MyClient(discord.Client):
     async def on_user_update(self, before, after):
         for i in self.guilds:
             guild = i
-            f = open(f"guilds/{guild.id}.json", "r")
-            infoguild = json.load(f)
+            infoguild = openconfig(guild.id)
             if guild.get_member(before.id) != None and infoguild["logs"][0] != 0:
                 channel = self.get_channel(infoguild["logs"][0])
                 if infoguild["logs"][1]["user"] == 1 and after.avatar and before.avatar != after.avatar:
@@ -132,8 +149,7 @@ class MyClient(discord.Client):
                     await channel.send(content=None, embed=embed)
 
     async def on_guild_update(self, before, after):
-        f = open(f"guilds/{before.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(before.id)
         if infoguild["logs"][0] != 0:
             channel = self.get_channel(infoguild["logs"][0])
             if infoguild["logs"][1]["guild"] == 1 and after.name and before.name != after.name:
@@ -143,8 +159,7 @@ class MyClient(discord.Client):
 
     async def on_guild_role_create(self, role):
         guild = role.guild
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["guild_role"] == 1:
             channel = self.get_channel(infoguild["logs"][0])
             embed = discord.Embed(title="Role created", description=f"Target: {guild.name}\n\n<@&{role.id}>", colour=infoguild["color"])
@@ -153,8 +168,7 @@ class MyClient(discord.Client):
 
     async def on_guild_role_delete(self, role):
         guild = role.guild
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["guild_role"] == 1:
             channel = self.get_channel(infoguild["logs"][0])
             embed = discord.Embed(title="Role deleted", description=f"Target: {guild.name}\n\n{role.name}", colour=infoguild["color"])
@@ -163,8 +177,7 @@ class MyClient(discord.Client):
     
     async def on_guild_role_update(self, before, after):
         guild = before.guild
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["guild_role"] == 1:
             channel = self.get_channel(infoguild["logs"][0])
             if before.name != after.name:
@@ -181,8 +194,7 @@ class MyClient(discord.Client):
                 await channel.send(content=None, embed=embed)
 
     async def on_guild_emojis_update(self, guild, before, after):
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["emojis"] == 1:
             channel = self.get_channel(infoguild["logs"][0])
             if len(before) > len(after):
@@ -205,8 +217,7 @@ class MyClient(discord.Client):
                         await channel.send(content=None, embed=embed)
 
     async def on_member_ban(self, guild, user):
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["bans"] == 1:
             channel = self.get_channel(infoguild["logs"][0])
             embed = discord.Embed(title="Member banned", description=f"Target: {user.mention}\n\n{user}", colour=infoguild["color"])
@@ -214,8 +225,7 @@ class MyClient(discord.Client):
             await channel.send(content=None, embed=embed)
 
     async def on_member_unban(self, guild, user):
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["bans"] == 1:
             channel = self.get_channel(infoguild["logs"][0])
             embed = discord.Embed(title="Member unbanned", description=f"Target: {user.mention}\n\n{user}", colour=infoguild["color"])
@@ -224,8 +234,7 @@ class MyClient(discord.Client):
 
     async def on_message_edit(self, before, after):
         guild = before.guild
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["messages"] == 1 and not before.author.bot:
             channel = self.get_channel(infoguild["logs"][0])
             if before.content != after.content:
@@ -235,8 +244,7 @@ class MyClient(discord.Client):
 
     async def on_message_delete(self, message):
         guild = message.guild
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["messages"] == 1 and not message.author.bot:
             channel = self.get_channel(infoguild["logs"][0])
             embed = discord.Embed(title="Message deleted", description=f"Target: {message.author.mention}\n\n{message.channel.mention} - ~~{message.content}~~", colour=infoguild["color"])
@@ -245,8 +253,7 @@ class MyClient(discord.Client):
 
     async def on_raw_reaction_add(self, payload):
         guild = self.get_guild(payload.guild_id)
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if len(infoguild["reactrole"]) >= 1:
             for i in infoguild["reactrole"]:
                 if i[0] == payload.channel_id and i[1] == payload.message_id and str(payload.emoji.id) in i[2]:
@@ -254,8 +261,7 @@ class MyClient(discord.Client):
     
     async def on_raw_reaction_remove(self, payload):
         guild = self.get_guild(payload.guild_id)
-        f = open(f"guilds/{guild.id}.json", "r")
-        infoguild = json.load(f)
+        infoguild = openconfig(guild.id)
         if len(infoguild["reactrole"]) >= 1:
             for i in infoguild["reactrole"]:
                 if i[0] == payload.channel_id and i[1] == payload.message_id and str(payload.emoji.id) in i[2]:
@@ -270,22 +276,7 @@ class MyClient(discord.Client):
         f.close()
         f = open("help.json", "r")
         infos["help"] = json.load(f)
-        if message.guild:
-            try:
-                f = open(f"guilds/{message.guild.id}.json", "r")
-                infoguild = json.load(f)
-            except:
-                #initialization
-                f = open("guilds/default.json", "r")
-                default = json.load(f)
-                infoguild = default
-                f.close()
-                f = open(f"guilds/{message.guild.id}.json", "w")
-                json.dump(default, f)
-                f.close()
-        else:
-            f = open("guilds/default.json", "r")
-            infoguild = json.load(f)
+        infoguild = openconfig(message.guild.id)
         prefix = infoguild["prefix"]
         admin = infoguild["admins"]
         #cut message into list
@@ -300,6 +291,8 @@ class MyClient(discord.Client):
                     p = "TT"
             else:
                 p = "TT"
+        #ignore channel
+
         #logs
         try:
             print(f"{message.guild.name} - {message.channel.name} - {message.author.name}: {message.content}")
@@ -322,9 +315,7 @@ class MyClient(discord.Client):
                         await message.add_reaction("👍")
                         await message.add_reaction("👎")
                         infoguild["vote"][2] = 0
-                        f = open(f"guilds/{message.guild.id}.json", "w")
-                        json.dump(infoguild, f)
-                        f.close()
+                        saveconfig(infoguild, message.guild.id)
                 return
             #commands
             if message.content.strip(" ") == "<@782922227397689345>" or message.content.strip(" ") == "<@!782922227397689345>":
@@ -336,35 +327,43 @@ class MyClient(discord.Client):
                     #change status
                     if messlist[0] == p + "status":
                         await message.delete()
-                        statuspron = ["p", "s", "l", "w"]
-                        for i in range(4):
-                            if messlist[1] == statuspron[i]:
-                                messlist[1] = i
-                        infos["status"][0] = messlist[1]
-                        infos["status"][1] = sortname(messlist, 2)
-                        f = open("infos.json", "w", encoding = "utf-8")
-                        json.dump(infos, f)
-                        f.close()
-                        if messlist[1] == 0:
-                            await self.change_presence(activity=discord.Game(sortname(messlist, 2)))
-                        elif messlist[1] == 1:
-                            act2 = ""
-                            for i in range(2, len(messlist) - 1):
-                                act2 = act2 + messlist[i] + " "
-                            await self.change_presence(activity=discord.Streaming(name=act2, url=messlist[-1]))
-                        elif messlist[1] == 2:
-                            await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=sortname(messlist, 2)))
-                        elif messlist[1] == 3:
-                            await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=sortname(messlist, 2)))
+                        if messlist[1] == "default":
+                            await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"{len(self.guilds)} servers"))
+                            print(f"{self.user} is connected as watching {len(self.guilds)} servers")
+                            infos["status"][0] = 4
+                            infos["status"][1] = ""
+                            f = open("infos.json", "w", encoding = "utf-8")
+                            json.dump(infos, f)
+                            f.close()
                         else:
-                            await self.change_presence(activity=discord.Game('on TechTonic SMP'))
+                            statuspron = ["p", "s", "l", "w"]
+                            for i in range(4):
+                                if messlist[1] == statuspron[i]:
+                                    messlist[1] = i
+                            infos["status"][0] = messlist[1]
+                            infos["status"][1] = sortname(messlist, 2)
+                            f = open("infos.json", "w", encoding = "utf-8")
+                            json.dump(infos, f)
+                            f.close()
+                            if messlist[1] == 0:
+                                await self.change_presence(activity=discord.Game(sortname(messlist, 2)))
+                            elif messlist[1] == 1:
+                                act2 = ""
+                                for i in range(2, len(messlist) - 1):
+                                    act2 = act2 + messlist[i] + " "
+                                await self.change_presence(activity=discord.Streaming(name=act2, url=messlist[-1]))
+                            elif messlist[1] == 2:
+                                await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=sortname(messlist, 2)))
+                            elif messlist[1] == 3:
+                                await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=sortname(messlist, 2)))
+                            else:
+                                await self.change_presence(activity=discord.Game('on TechTonic SMP'))
                     #commands
                     elif messlist[0] == p + "clearcommand":
                         try:
                             await message.delete()
                             infoguild["command"] = [[], [], []]
-                            f = open(f"guilds/{message.guild.id}.json", "w")
-                            json.dump(infoguild, f)
+                            saveconfig(infoguild, message.guild.id)
                             embed = discord.Embed(title="Succesfully removed all commands", description="", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
                         except:
@@ -421,8 +420,11 @@ class MyClient(discord.Client):
                     if message.author.roles[-1].id in admin and getid(messlist[1]) or message.author.id in owner and getid(messlist[1]) or message.author == message.guild.owner and getid(messlist[1]):
                         try:
                             member = message.guild.get_member(getid(messlist[1]))
-                            await member.edit(nick=sortname(messlist, 2))
-                            embed = discord.Embed(title="Successfully changed nickname", description=f"{member.mention} to {sortname(messlist, 2)}", colour=infoguild["color"])
+                            nick = sortname(messlist, 2)
+                            if nick.replace(" ", "") == "" or nick.replace(" ", "") == "reset":
+                                nick = member.name
+                            await member.edit(nick=nick)
+                            embed = discord.Embed(title="Successfully changed nickname", description=f"{member.mention} to {nick}", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
                         except:
                             embed = discord.Embed(title="Could not change nickname", description="Make sure that I have manage nickname permission and that my role is above the target's", colour=infoguild["color"])
@@ -453,9 +455,7 @@ class MyClient(discord.Client):
                         if messlist[1] == "app" or messlist[1] == "application":
                             if infoguild["vote"][1] != 0:
                                 infoguild["vote"][2] = 1
-                                f = open(f"guilds/{message.guild.id}.json", "w")
-                                json.dump(infoguild, f)
-                                f.close()
+                                saveconfig(infoguild, message.guild.id)
                                 channel = self.get_channel(infoguild["vote"][1])
                                 await channel.send(sortname(messlist, 2))
                             else:
@@ -464,9 +464,7 @@ class MyClient(discord.Client):
                         else:
                             if infoguild["vote"][0] != 0:
                                 infoguild["vote"][2] = 1
-                                f = open(f"guilds/{message.guild.id}.json", "w")
-                                json.dump(infoguild, f)
-                                f.close()
+                                saveconfig(infoguild, message.guild.id)
                                 channel = self.get_channel(infoguild["vote"][0])
                                 await channel.send(sortname(messlist, 1))
                             else:
@@ -476,26 +474,20 @@ class MyClient(discord.Client):
                     elif messlist[0] == p + "mute":
                         if getid(messlist[1]) not in infoguild["muted"]:
                             infoguild["muted"].append(getid(messlist[1]))
-                            f = open(f"guilds/{message.guild.id}.json", "w")
-                            json.dump(infoguild, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                             embed = discord.Embed(title="", description=f"<@{getid(messlist[1])}> has been stfu-ed", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
                     #unmute
                     elif messlist[0] == p + "unmute":
                         if messlist[1] == "all" or messlist[1] == "everyone":
                             infoguild["muted"] = []
-                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                            json.dump(infoguild, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                             embed = discord.Embed(title="", description="Everyone has been un-stfu-ed", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
                         else:
                             if getid(messlist[1]) in infoguild["muted"]:
                                 infoguild["muted"].remove(getid(messlist[1]))
-                                f = open(f"guilds/{message.guild.id}.json", "w")
-                                json.dump(infoguild, f)
-                                f.close()
+                                saveconfig(infoguild, message.guild.id)
                                 embed = discord.Embed(title="", description=f"<@{getid(messlist[1])}> has been un-stfu-ed", colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
                     #embeds
@@ -702,9 +694,7 @@ class MyClient(discord.Client):
                                 infoguild["command"][1].append(sortname(messlist, 3))
                                 infoguild["command"][2].append(1)
                                 embed = discord.Embed(title="successfully added", description=f"**{p}{messlist[1]}**\n{sortname(messlist, 3)}\n as embed", colour=infoguild["color"])
-                            f = open(f"guilds/{message.guild.id}.json", "w")
-                            json.dump(infoguild, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                             await message.channel.send(content=None, embed=embed)
                     elif messlist[0] == p + "removecommand":
                         if messlist[1] in infoguild["command"][0]:
@@ -713,9 +703,7 @@ class MyClient(discord.Client):
                                     infoguild["command"][0].pop(i)
                                     infoguild["command"][1].pop(i)
                                     infoguild["command"][2].pop(i)
-                                    f = open(f"guilds/{message.guild.id}.json", "w")
-                                    json.dump(infoguild, f)
-                                    f.close()
+                                    saveconfig(infoguild, message.guild.id)
                                     embed = discord.Embed(title="successfully removed", description=f"**{p}{messlist[1]}**", colour=infoguild["color"])
                                     await message.channel.send(content=None, embed=embed)
                                     break
@@ -734,22 +722,16 @@ class MyClient(discord.Client):
                             f = open("guilds/default.json", "r")
                             default = json.load(f)
                             infoguild[messlist[1]] = default[messlist[1]]
-                            f = open(f"guilds/{message.guild.id}.json", "w")
-                            json.dump(infoguild, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                         else:
                             f = open("guilds/default.json", "r")
                             default = json.load(f)
-                            f = open(f"guilds/{message.guild.id}.json", "w")
-                            json.dump(default, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                     elif messlist[0] == p + "color":
                         try:
                             if int(messlist[1]) >= 0 and int(messlist[1]) <= 16777215:
                                 infoguild["color"] = int(messlist[1])
-                                f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                                json.dump(infoguild, f)
-                                f.close()
+                                saveconfig(infoguild, message.guild.id)
                                 embed = discord.Embed(title="Color has been changed to", description=infoguild['color'], colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
                             else:
@@ -761,34 +743,26 @@ class MyClient(discord.Client):
                     elif messlist[0] == p + "prefixadd":
                         if messlist[0] not in infoguild["prefix"]:
                             infoguild["prefix"].append(messlist[1])
-                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                            json.dump(infoguild, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                             embed = discord.Embed(title="Added to prefix list", description=messlist[1], colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
                     elif messlist[0] == p + "prefixremove":
                         if messlist[1] in infoguild["prefix"] and len(infoguild["prefix"]) > 1:
                             infoguild["prefix"].remove(messlist[1])
-                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                            json.dump(infoguild, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                             embed = discord.Embed(title="Removed from prefix list", description=messlist[1], colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
                     #op
                     elif messlist[0] == p + "op":
                         infoguild["admins"].append(int(getid(messlist[1])))
-                        f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                        json.dump(infoguild, f)
-                        f.close()
+                        saveconfig(infoguild, message.guild.id)
                         embed = discord.Embed(title="Added to admin list", description=f"<@&{getid(messlist[1])}>", colour=infoguild["color"])
                         await message.channel.send(content=None, embed=embed)
                     #unop
                     elif messlist[0] == p + "unop":
                         if getid(messlist[1]) in infoguild["admins"]:
                             infoguild["admins"].remove(getid(messlist[1]))
-                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                            json.dump(infoguild, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                             embed = discord.Embed(title="Removed from admin list", description=f"<@&{getid(messlist[1])}>", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
                         else:
@@ -804,41 +778,31 @@ class MyClient(discord.Client):
                             infoguild["vote"][0] = getid(messlist[1])
                             embed = discord.Embed(title="Set voting channel", description=f"<#{getid(messlist[1])}>", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
-                        f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                        json.dump(infoguild, f)
-                        f.close()
+                        saveconfig(infoguild, message.guild.id)
                     #welcome
                     elif messlist[0] == p + "welcome":
                         if messlist[1] == "leave":
                             infoguild["welcome"][1] = sortname(messlist, 2)
                             embed = discord.Embed(title="Set leave message", description=sortname(messlist, 2), colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
-                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                            json.dump(infoguild, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                         elif messlist[1] == "role":
                             infoguild["welcome"][2] = getid(messlist[2])
                             embed = discord.Embed(title="Set welcome role", description=f"<@&{getid(messlist[2])}>", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
-                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                            json.dump(infoguild, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                         else:
                             infoguild["welcome"][0] = sortname(messlist)
                             embed = discord.Embed(title="Set welcome message", description=sortname(messlist), colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
-                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                            json.dump(infoguild, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                     #logs
                     elif messlist[0] == p + "logs" or messlist[0] == p + "log":
                         try:
                             if messlist[1] == "channel":
                                 try:
                                     infoguild["logs"][0] = getid(messlist[2])
-                                    f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                                    json.dump(infoguild, f)
-                                    f.close()
+                                    saveconfig(infoguild, message.guild.id)
                                     embed = discord.Embed(title="Set log channel", description=f"<#{getid(messlist[2])}>", colour=infoguild["color"])
                                     await message.channel.send(content=None, embed=embed)
                                 except:
@@ -848,36 +812,28 @@ class MyClient(discord.Client):
                                 if messlist[2] == "all" or messlist[2] == "everything":
                                     for i in infoguild["logs"][1]:
                                         infoguild["logs"][1][i] = 1
-                                    f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                                    json.dump(infoguild, f)
-                                    f.close()
+                                    saveconfig(infoguild, message.guild.id)
                                     embed = discord.Embed(title="Enabled all log types", description="", colour=infoguild["color"])
                                     await message.channel.send(content=None, embed=embed)
                                 else:
                                     for i in infoguild["logs"][1]:
                                         if messlist[2] == i:
                                             infoguild["logs"][1][i] = 1
-                                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                                            json.dump(infoguild, f)
-                                            f.close()
+                                            saveconfig(infoguild, message.guild.id)
                                             embed = discord.Embed(title="Enabled", description=i, colour=infoguild["color"])
                                             await message.channel.send(content=None, embed=embed)
                             elif messlist[1] == "remove" or messlist[1] == "disable":
                                 if messlist[2] == "all" or messlist[2] == "everything":
                                     for i in infoguild["logs"][1]:
                                         infoguild["logs"][1][i] = 0
-                                    f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                                    json.dump(infoguild, f)
-                                    f.close()
+                                    saveconfig(infoguild, message.guild.id)
                                     embed = discord.Embed(title="Disabled all log types", description="", colour=infoguild["color"])
                                     await message.channel.send(content=None, embed=embed)
                                 else:
                                     for i in infoguild["logs"][1]:
                                         if messlist[2] == i:
                                             infoguild["logs"][1][i] = 0
-                                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                                            json.dump(infoguild, f)
-                                            f.close()
+                                            saveconfig(infoguild, message.guild.id)
                                             embed = discord.Embed(title="Disabled", description=i, colour=infoguild["color"])
                                             await message.channel.send(content=None, embed=embed)
                             else:
@@ -902,9 +858,7 @@ class MyClient(discord.Client):
                     elif messlist[0] == p + "reactionrole" or messlist[0] == p + "reaction_role":
                         try:
                             infoguild["reactrole"].append([int(messlist[1].split("/")[5]), int(messlist[1].split("/")[6]), messlist[2], getid(messlist[3])])
-                            f = open(f"guilds/{message.guild.id}.json", "w", encoding = "utf-8")
-                            json.dump(infoguild, f)
-                            f.close()
+                            saveconfig(infoguild, message.guild.id)
                             channel = self.get_channel(int(messlist[1].split("/")[5]))
                             message2 = await channel.fetch_message(int(messlist[1].split("/")[6]))
                             embed = discord.Embed(title="Reaction role", description=f"channel: <#{int(messlist[1].split('/')[5])}>\nmessage: {message2.content}\nemoji: {messlist[2]}\nrole: <@&{getid(messlist[3])}>", colour=infoguild["color"])
@@ -958,12 +912,6 @@ class MyClient(discord.Client):
                 embed = discord.Embed(title="Logo", description="", colour=infoguild["color"])
                 embed.set_image(url="https://cdn.discordapp.com/attachments/786325403651276800/843598660935090206/techlogo.png")
                 await message.channel.send(content=None, embed=embed)
-            #trailer
-            elif messlist[0] == p + "trailer":
-                await message.channel.send("https://youtu.be/dNfiFiI6yI0")
-            #pack
-            elif messlist[0] == p + "pack":
-                await message.channel.send(file=discord.File("TTpack.mcpack"))
             #av
             elif messlist[0] == p + "av" or messlist[0] == p + "avatar":
                 if len(messlist) >= 2:
