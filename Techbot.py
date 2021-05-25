@@ -262,17 +262,76 @@ class MyClient(discord.Client):
         infoguild = openconfig(guild.id)
         if len(infoguild["reactrole"]) >= 1:
             for i in infoguild["reactrole"]:
-                if i[0] == payload.channel_id and i[1] == payload.message_id and str(payload.emoji.id) in i[2]:
+                if i[0] == payload.channel_id and i[1] == payload.message_id and str(payload.emoji) in i[2]:
                     await payload.member.add_roles(guild.get_role(i[3]))
+        if infoguild["star"][1] and str(payload.emoji) == infoguild["star"][2]:
+            try:
+                f = open(f"star/{guild.id}.json", "r", encoding = "utf-8")
+                star = json.load(f)
+            except:
+                #initialization
+                star = {}
+                f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
+                json.dump(star, f)
+                f.close()
+            mess = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
+            reactions = 0
+            for i in mess.reactions:
+                if str(i) == infoguild["star"][2]:
+                    reactions = i.count
+            if str(payload.message_id) not in star and reactions >= infoguild["star"][1]:
+                embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\nMessage: {mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
+                embed.set_thumbnail(url=mess.author.avatar_url)
+                channel = guild.get_channel(infoguild["star"][0])
+                message = await channel.send(content=f"**{reactions} | {mess.channel.mention}**", embed=embed)
+                star[str(payload.message_id)] = message.id
+                f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
+                json.dump(star, f)
+                f.close()
+            elif str(payload.message_id) in star and reactions >= infoguild["star"][1]:
+                message = await guild.get_channel(infoguild["star"][0]).fetch_message(star[str(payload.message_id)])
+                embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\nMessage: {mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
+                embed.set_thumbnail(url=mess.author.avatar_url)
+                await message.edit(content=f"**{reactions} | {mess.channel.mention}**", embed=embed)
+
+
     
     async def on_raw_reaction_remove(self, payload):
         guild = self.get_guild(payload.guild_id)
         infoguild = openconfig(guild.id)
         if len(infoguild["reactrole"]) >= 1:
             for i in infoguild["reactrole"]:
-                if i[0] == payload.channel_id and i[1] == payload.message_id and str(payload.emoji.id) in i[2]:
+                if i[0] == payload.channel_id and i[1] == payload.message_id and str(payload.emoji) in i[2]:
                     member = guild.get_member(payload.user_id)
                     await member.remove_roles(guild.get_role(i[3]))
+        if infoguild["star"][1] and str(payload.emoji) == infoguild["star"][2]:
+            try:
+                f = open(f"star/{guild.id}.json", "r", encoding = "utf-8")
+                star = json.load(f)
+            except:
+                #initialization
+                star = {}
+                f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
+                json.dump(star, f)
+                f.close()
+            mess = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
+            reactions = 0
+            for i in mess.reactions:
+                if str(i) == infoguild["star"][2]:
+                    reactions = i.count
+            if str(payload.message_id) not in star and reactions >= infoguild["star"][1]:
+                embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\n{mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
+                embed.set_thumbnail(url=mess.author.avatar_url)
+                message = await guild.get_channel(infoguild["star"][0]).send(content=f"**{reactions} | {mess.channel.mention}**", embed=embed)
+                star[str(payload.message_id)] = message.id
+                f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
+                json.dump(star, f)
+                f.close()
+            elif str(payload.message_id) in star and reactions >= infoguild["star"][1]:
+                message = await guild.get_channel(infoguild["star"][0]).fetch_message(star[str(payload.message_id)])
+                embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\n{mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
+                embed.set_thumbnail(url=mess.author.avatar_url)
+                await message.edit(content=f"**{reactions} | {mess.channel.mention}**", embed=embed)
 
 
     async def on_message(self, message):
@@ -380,33 +439,26 @@ class MyClient(discord.Client):
                             await message.channel.send(content=None, embed=embed)
                     #updates
                     elif messlist[0] == p + "update":
-                        await message.delete()
-                        for a in self.guilds:
-                            print(a.name, a.owner)
-                            try:
-                                f = open(f"guilds/{a.id}.json", "r")
-                                infoguild = json.load(f)
-                            except:
-                                #initialization
-                                f = open("guilds/default.json", "r")
-                                default = json.load(f)
-                                infoguild = default
-                                f.close()
-                                f = open(f"guilds/{a.id}.json", "w")
-                                json.dump(default, f)
-                                f.close()
-                            #f = open("guilds/default.json", "r")
-                            #infos2 = json.load(f)
-                            #for i in infoguild:
-                            #    infos2[i] = infoguild[i]
-                            infoguild["blackchannels"] = []
-                            saveconfig(infoguild, a.id)
-                            #f = open(f"guilds/{a.id}.json", "w")
-                            #json.dump(infos2, f)
-                            #json.dump(infoguild, f)
-                            #f.close()
-                            embed = discord.Embed(title="Updated", description=a.name, colour=infoguild["color"])
-                            await message.channel.send(content=None, embed=embed)
+                        async with message.channel.typing():
+                            updated = 0
+                            embed = discord.Embed(title=f"Updating 0 / {len(self.guilds)}", description="", colour=infoguild["color"])
+                            mess = await message.channel.send(content=None, embed=embed)
+                            for a in self.guilds:
+                                infoguild = openconfig(a.id)
+                                default = openconfig()
+                                try:
+                                    #update here
+                                    infoguild["star"] = default["star"]
+                                    #end of update
+                                    saveconfig(infoguild, a.id)
+                                    updated += 1
+                                    embed = discord.Embed(title=f"Updating {updated} / {len(self.guilds)}", description=f"guild: {a.name}\nowner: {a.owner}", colour=infoguild["color"])
+                                    await mess.edit(content=None, embed=embed)
+                                except:
+                                    embed = discord.Embed(title="Could not update", description=f"guild: {a.name}\nowner: {a.owner}", colour=infoguild["color"])
+                                    await message.channel.send(content=None, embed=embed)
+                            embed = discord.Embed(title="Successfully updated", description=f"{updated} / {len(self.guilds)} guilds", colour=infoguild["color"])
+                            await mess.edit(content=None, embed=embed)
                 #number of users
                 if messlist[0] == p + "users" or message.content == p + "members":
                     await message.delete()
@@ -746,7 +798,7 @@ class MyClient(discord.Client):
                         blackchannels = ""
                         for i in range(len(infoguild["blackchannels"])):
                             blackchannels = blackchannels + f'<#{int(infoguild["blackchannels"][i])}>'
-                        embed.add_field(name="current configuration", value=f'color: {infoguild["color"]}\nprefix: {infoguild["prefix"]}\nadmins: {adminlist}\nvote: <#{int(infoguild["vote"][0])}>\napp vote: <#{int(infoguild["vote"][1])}>\nwelcome message: {infoguild["welcome"][0]}\nyeet message: {infoguild["welcome"][1]}\nblacklisted channels: {blackchannels}')
+                        embed.add_field(name="current configuration", value=f'color: {infoguild["color"]}\nprefix: {infoguild["prefix"]}\nadmins: {adminlist}\nvote: <#{int(infoguild["vote"][0])}>\napp vote: <#{int(infoguild["vote"][1])}>\nwelcome message: {infoguild["welcome"][0]}\nyeet message: {infoguild["welcome"][1]}\nblacklisted channels: {blackchannels}\nstarboard: <#{infoguild["star"][0]}> with {infoguild["star"][1]} {infoguild["star"][2]}')
                         await message.channel.send(content=None, embed=embed)
                     elif messlist[0] == p + "reset":
                         if len(messlist) > 1:
@@ -893,7 +945,7 @@ class MyClient(discord.Client):
                             embed.add_field(name="current config", value=f"channel: <#{infoguild['logs'][0]}>\n" + log.replace("0", "<:cross:845741065306112040>").replace("1", "<:check:845741031344963605>"))
                             await message.channel.send(content=None, embed=embed)
                     #reaction role
-                    elif messlist[0] == p + "reactionrole" or messlist[0] == p + "reaction_role":
+                    elif messlist[0] == p + "reactionrole" or messlist[0] == p + "reaction_role" or messlist[0] == p + "rr":
                         try:
                             infoguild["reactrole"].append([int(messlist[1].split("/")[5]), int(messlist[1].split("/")[6]), messlist[2], getid(messlist[3])])
                             saveconfig(infoguild, message.guild.id)
@@ -903,6 +955,23 @@ class MyClient(discord.Client):
                             await message.channel.send(content=None, embed=embed)
                         except:
                             embed = discord.Embed(title="Couldn't setup reaction role", description=f"Make sure everything is correct, doublecheck {p}setup and that i have perms", colour=infoguild["color"])
+                            await message.channel.send(content=None, embed=embed)
+                    #starboard:
+                    elif messlist[0] == p + "starboard" or messlist[0] == p + "star":
+                        if messlist[1].lower() == "channel":
+                            infoguild["star"][0] = getid(messlist[2])
+                            saveconfig(infoguild, message.guild.id)
+                            embed = discord.Embed(title="Successfully set", description=f"<#{getid(messlist[2])}> as the starboard channel", colour=infoguild["color"])
+                            await message.channel.send(content=None, embed=embed)
+                        elif messlist[1].lower() == "limit" or messlist[1].lower() == "starlimit" or messlist[1].lower() == "star":
+                            infoguild["star"][1] = int(messlist[2])
+                            saveconfig(infoguild, message.guild.id)
+                            embed = discord.Embed(title="Successfully set", description=f"**{int(messlist[2])}** as the number of stars required", colour=infoguild["color"])
+                            await message.channel.send(content=None, embed=embed)
+                        elif messlist[1].lower() == "emoji" or messlist[1].lower() == "emote":
+                            infoguild["star"][2] = messlist[2]
+                            saveconfig(infoguild, message.guild.id)
+                            embed = discord.Embed(title="Successfully set", description=f"{messlist[2]} as the star emoji", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
         #dms
         else:
@@ -920,9 +989,9 @@ class MyClient(discord.Client):
                         embed = discord.Embed(title="", description=sortname(messlist), colour=infoguild["color"])
                     await message.channel.send(content=None, embed=embed)
         #fun
-        if "832240193020624896" in message.content:
+        if "832240193020624896>" in message.content:
             await message.channel.send("https://cdn.discordapp.com/attachments/761594268405989399/845705313885880391/ezgif.com-gif-maker_28.gif")
-        if "782922227397689345" in message.content:
+        if "782922227397689345>" in message.content:
             await message.channel.send("https://cdn.discordapp.com/emojis/823170480143204383.gif?v=1")
         #everywhere commands
         if p in messlist[0]:
