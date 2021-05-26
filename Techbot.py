@@ -1,6 +1,7 @@
 import discord
 import json
 import os
+from keep_alive import keep_alive
 f = open("infos.json", "r")
 infos = json.load(f)
 act = infos["status"]
@@ -375,7 +376,6 @@ class MyClient(discord.Client):
             elif message.author.bot:
                 #techbot
                 if message.author.id == 782922227397689345:
-                    time.sleep(1)
                     #vote
                     if infoguild["vote"][2] == 1:
                         await message.add_reaction("👍")
@@ -1043,4 +1043,5 @@ intents = discord.Intents.default()
 intents.members = True
 
 client = MyClient(intents=intents)
+keep_alive()
 client.run(os.getenv('token'))
