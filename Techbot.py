@@ -1,12 +1,12 @@
-import discord, json, time, datetime
+import discord
+import json
+import os
 f = open("infos.json", "r")
 infos = json.load(f)
 act = infos["status"]
 owner = infos["owner"]
 f = open("app.txt", "r")
 application = f.read().split("|")
-f = open("token.txt", "r")
-TOKEN = f.read()
 
 #utility
 def sortname(message, init=1, end=None):
@@ -1043,4 +1043,4 @@ intents = discord.Intents.default()
 intents.members = True
 
 client = MyClient(intents=intents)
-client.run(TOKEN)
+client.run(os.getenv('token'))
