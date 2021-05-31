@@ -8,6 +8,7 @@ authors = ["MCBECraft <<>>"]
 python = "^3.8"
 discord = "^1.0.1"
 flask = "^2.0.1"
+PyNaCl = "^1.4.0"
 
 [tool.poetry.dev-dependencies]
 

@@ -4,51 +4,40 @@ import os
 from keep_alive import keep_alive
 
 #load infos
-f = open("infos.json", "r")
-infos = json.load(f)
+with open("app.txt") as app_file:
+    application = app_file.read().split("|")
+
+with open("infos.json", "r") as help_file:
+    infos = json.load(help_file)
 act = infos["status"]
 owner = infos["owner"]
-f = open("app.txt", "r")
-application = f.read().split("|")
-f = open("help.json", "r")
-infos["help"] = json.load(f)
+with open("help.json", "r") as help_file:
+    infos["help"] = json.load(help_file)
+
 
 #utility
 #get a string from the message list
-def sortname(message, init=1, end=None):
-    if not end:
-        end = len(message)
-    name = ""
-    for i in range(init, end):
-        if i != end:
-            name += message[i] + " "
-    return name
+sortname = lambda message, init=1, end=None : " ".join(list(message[init:end]))
 
 #extract id from discord mentions
 def getid(message):
     try:
-        id = ""
-        for i in message:
-            if i not in "<@&!#> ":
-                id += i
-        return int(id)
+        return int(message.replace("<", "").replace("#", "").replace("@", "").replace("!", "").replace("&", "").replace(">", ""))
     except:
         return None
 
 #open the guild config
 def openconfig(id="default"):
     try:
-        f = open(f"guilds/{id}.json", "r", encoding = "utf-8")
-        infoguild = json.load(f)
+        with open(f"guilds/{id}.json", "r", encoding = "utf-8") as help_file:
+            infoguild = json.load(help_file)
     except:
         #initialization
-        f = open("guilds/default.json", "r", encoding = "utf-8")
-        default = json.load(f)
+        with open("guilds/default.json", "r", encoding = "utf-8") as help_file:
+            default = json.load(help_file)
         infoguild = default
-        f.close()
-        f = open(f"guilds/{id}.json", "w", encoding = "utf-8")
-        json.dump(default, f)
-        f.close()
+        with open(f"guilds/{id}.json", "w", encoding = "utf-8") as help_file:
+            json.dump(default, help_file)
     return infoguild
 
 #save the guild config
@@ -332,7 +321,7 @@ class MyClient(discord.Client):
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["messages"] == 1 and not before.author.bot:
             channel = self.get_channel(infoguild["logs"][0])
             if before.content != after.content:
-                embed = discord.Embed(title="Message edited", description=f"Target: {before.author.mention}\n\n{before.channel.mention} - {before.content} -> [{after.content}]({after.jump_url})", colour=infoguild["color"])
+                embed = discord.Embed(title="Message edited", description=f"Target: {before.author.mention}\n\n{before.channel.mention} [click to jump]({after.jump_url}):\n{before.content} -> {after.content}", colour=infoguild["color"])
                 embed.set_thumbnail(url=before.author.avatar_url)
                 if len(before.attachments) >= 1:
                     for i in before.attachments:
@@ -370,7 +359,7 @@ class MyClient(discord.Client):
                     await payload.member.add_roles(guild.get_role(i[3]))
 
         #starboard
-        if infoguild["star"][1] and str(payload.emoji) == infoguild["star"][2]:
+        if infoguild["star"][1] and str(payload.emoji) in infoguild["star"][2]:
             try:
                 f = open(f"star/{guild.id}.json", "r", encoding = "utf-8")
                 star = json.load(f)
@@ -381,34 +370,67 @@ class MyClient(discord.Client):
                 json.dump(star, f)
                 f.close()
             mess = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
-            reactions = 0
+            userid = {}
             for i in mess.reactions:
-                if str(i) == infoguild["star"][2]:
-                    reactions = i.count
-            
+                if str(i) in infoguild["star"][2]:
+                    users = await i.users().flatten()
+                    for i in users:
+                        userid[str(i.id)] = 1
+            channel = guild.get_channel(infoguild["star"][0])
+
             #send to starboard
-            if str(payload.message_id) not in star and reactions >= infoguild["star"][1]:
+            if str(payload.message_id) not in star and len(userid) >= infoguild["star"][1] and channel != mess.channel:
                 embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\n{mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
                 embed.set_thumbnail(url=mess.author.avatar_url)
-                channel = guild.get_channel(infoguild["star"][0])
                 if len(mess.attachments) >= 1:
                     for i in mess.attachments:
                         embed.set_image(url=i.url)
-                message = await channel.send(content=f"**{reactions} | {mess.channel.mention}**", embed=embed)
-                star[str(payload.message_id)] = message.id
+                message = await channel.send(content=f"**{len(userid)} | {mess.channel.mention}**", embed=embed)
+                star[str(payload.message_id)] = [message.id, userid]
                 f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
                 json.dump(star, f)
                 f.close()
 
             #edit starboard message
-            elif str(payload.message_id) in star and reactions >= infoguild["star"][1]:
-                message = await guild.get_channel(infoguild["star"][0]).fetch_message(star[str(payload.message_id)])
+            elif str(payload.message_id) in star and len(userid) >= infoguild["star"][1] and channel != mess.channel:
+                message = await guild.get_channel(infoguild["star"][0]).fetch_message(star[str(payload.message_id)][0])
+                for i in message.reactions:
+                    if str(i) in infoguild["star"][2]:
+                        users = await i.users().flatten()
+                        for i in users:
+                            userid[str(i.id)] = 1
+                star[str(payload.message_id)] = [message.id, userid]
+                f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
+                json.dump(star, f)
                 embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\n{mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
                 embed.set_thumbnail(url=mess.author.avatar_url)
                 if len(mess.attachments) >= 1:
                     for i in mess.attachments:
                         embed.set_image(url=i.url)
-                await message.edit(content=f"**{reactions} | {mess.channel.mention}**", embed=embed)
+                await message.edit(content=f"**{len(userid)} | {mess.channel.mention}**", embed=embed)
+
+            #starring starboard
+            elif channel == mess.channel:
+                message = mess
+                messageid = 0
+                for i in star:
+                    if star[i][0] == payload.message_id:
+                        messageid = i
+                userid = star[str(messageid)][1]
+                for i in message.reactions:
+                    if str(i) in infoguild["star"][2]:
+                        users = await i.users().flatten()
+                        for i in users:
+                            userid[str(i.id)] = 1
+                star[messageid][1] = userid
+                f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
+                json.dump(star, f)
+                embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\n{mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
+                embed.set_thumbnail(url=mess.author.avatar_url)
+                if len(mess.attachments) >= 1:
+                    for i in mess.attachments:
+                        embed.set_image(url=i.url)
+                await message.edit(content=f"**{len(userid)} | {mess.channel.mention}**", embed=embed)
 
     async def on_raw_reaction_remove(self, payload):
         guild = self.get_guild(payload.guild_id)
@@ -433,21 +455,54 @@ class MyClient(discord.Client):
                 json.dump(star, f)
                 f.close()
             mess = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
-            reactions = 0
+            userid = {}
             for i in mess.reactions:
-                if str(i) == infoguild["star"][2]:
-                    reactions = i.count
+                if str(i) in infoguild["star"][2]:
+                    users = await i.users().flatten()
+                    for i in users:
+                        userid[str(i.id)] = 1
+            channel = guild.get_channel(infoguild["star"][0])
 
             #edit starboard message
-            if str(payload.message_id) in star and reactions >= infoguild["star"][1]:
-                message = await guild.get_channel(infoguild["star"][0]).fetch_message(star[str(payload.message_id)])
+            if str(payload.message_id) in star and len(userid) >= infoguild["star"][1] and channel != mess.channel:
+                message = await channel.fetch_message(star[str(payload.message_id)][0])
+                for i in message.reactions:
+                    if str(i) in infoguild["star"][2]:
+                        users = await i.users().flatten()
+                        for i in users:
+                            userid[str(i.id)] = 1
+                star[str(payload.message_id)] = [message.id, userid]
+                f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
+                json.dump(star, f)
                 embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\n{mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
                 embed.set_thumbnail(url=mess.author.avatar_url)
                 if len(mess.attachments) >= 1:
                     for i in mess.attachments:
-                        if list(i.filename.split("."))[-1].lower() in "pngsvgjpgjpegif":
-                            embed.set_image(url=i.url)
-                await message.edit(content=f"**{reactions} | {mess.channel.mention}**", embed=embed)
+                        embed.set_image(url=i.url)
+                await message.edit(content=f"**{len(userid)} | {mess.channel.mention}**", embed=embed)
+
+            #starring starboard
+            elif channel == mess.channel:
+                message = mess
+                messageid = 0
+                for i in star:
+                    if star[i][0] == payload.message_id:
+                        messageid = i
+                userid = star[str(messageid)][1]
+                for i in message.reactions:
+                    if str(i) in infoguild["star"][2]:
+                        users = await i.users().flatten()
+                        for i in users:
+                            userid[str(i.id)] = 1
+                star[messageid][1] = userid
+                f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
+                json.dump(star, f)
+                embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\n{mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
+                embed.set_thumbnail(url=mess.author.avatar_url)
+                if len(mess.attachments) >= 1:
+                    for i in mess.attachments:
+                        embed.set_image(url=i.url)
+                await message.edit(content=f"**{len(userid)} | {mess.channel.mention}**", embed=embed)
 
 
     async def on_message(self, message):
@@ -563,7 +618,9 @@ class MyClient(discord.Client):
                                 default = openconfig()
                                 try:
                                     #update here
-                                    infoguild["star"] = default["star"]
+                                    infoguild["star"][2] = ["\u2b50"]
+                                    with open(f"guilds/{a.id}.json", "w") as f:
+                                        json.dump(infoguild, f)
                                     #end of update
                                     saveconfig(infoguild, a.id)
                                     updated += 1
@@ -586,7 +643,7 @@ class MyClient(discord.Client):
                 elif messlist[0] == p + "say":
                     await message.delete()
                     if message.author.roles[-1].id in admin or message.author.id in owner or message.author == message.guild.owner:
-                        try:
+                        if "<#" in messlist[1]:
                             channel = message.guild.get_channel(getid(messlist[1]))
                             if len(messlist) >= 3:
                                 await channel.send(sortname(messlist, 2))
@@ -595,7 +652,7 @@ class MyClient(discord.Client):
                                     if list(i.filename.split("."))[-1].lower() in "pngsvgjpgjpegif":
                                         await i.save(f'cache/attachment.{list(i.filename.split("."))[-1].lower()}', use_cached=True)
                                         await channel.send(file=discord.File(f'cache/attachment.{list(i.filename.split("."))[-1].lower()}'))
-                        except:
+                        else:
                             if len(message.attachments) >= 1:
                                 for i in message.attachments:
                                     if list(i.filename.split("."))[-1].lower() in "pngsvgjpgjpegif":
@@ -813,15 +870,15 @@ class MyClient(discord.Client):
 
                     #role
                     elif messlist[0] == p + "role":
-                        member = message.guild.get_member(getid(messlist[2]))
-                        role = message.guild.get_role(getid(messlist[3]))
-                        if messlist[1] == "add":
+                        member = message.guild.get_member(getid(messlist[1]))
+                        role = message.guild.get_role(getid(messlist[2]))
+                        if role not in member.roles:
                             try:
                                 await member.add_roles(role)
                                 embed = discord.Embed(title="Successfully added", description=f"{role.mention} to {member.mention}", colour=infoguild["color"])
                             except:
                                 embed = discord.Embed(title="Could not add role", description="Make sure the command syntax is correct and that my role is above the role to give", colour=infoguild["color"])
-                        elif messlist[1] == "remove":
+                        else:
                             try:
                                 await member.remove_roles(role)
                                 embed = discord.Embed(title="Successfully removed", description=f"{role.mention} from {member.mention}", colour=infoguild["color"])
@@ -1009,20 +1066,18 @@ class MyClient(discord.Client):
                             await message.channel.send(content=None, embed=embed)
 
                     #adds a prefix
-                    elif messlist[0] == p + "prefixadd":
-                        if messlist[0] not in infoguild["prefix"]:
-                            infoguild["prefix"].append(messlist[1])
-                            saveconfig(infoguild, message.guild.id)
-                            embed = discord.Embed(title="Added to prefix list", description=messlist[1], colour=infoguild["color"])
-                            await message.channel.send(content=None, embed=embed)
+                    elif messlist[0] == p + "prefix" and messlist[0] not in infoguild["prefix"]:
+                        infoguild["prefix"].append(messlist[1])
+                        saveconfig(infoguild, message.guild.id)
+                        embed = discord.Embed(title="Added to prefix list", description=messlist[1], colour=infoguild["color"])
+                        await message.channel.send(content=None, embed=embed)
 
                     #removes a prefix
-                    elif messlist[0] == p + "prefixremove":
-                        if messlist[1] in infoguild["prefix"] and len(infoguild["prefix"]) > 1:
-                            infoguild["prefix"].remove(messlist[1])
-                            saveconfig(infoguild, message.guild.id)
-                            embed = discord.Embed(title="Removed from prefix list", description=messlist[1], colour=infoguild["color"])
-                            await message.channel.send(content=None, embed=embed)
+                    elif messlist[0] == p + "prefix" and messlist[1] in infoguild["prefix"] and len(infoguild["prefix"]) > 1:
+                        infoguild["prefix"].remove(messlist[1])
+                        saveconfig(infoguild, message.guild.id)
+                        embed = discord.Embed(title="Removed from prefix list", description=messlist[1], colour=infoguild["color"])
+                        await message.channel.send(content=None, embed=embed)
 
                     #adds an admin role
                     elif messlist[0] == p + "op":
@@ -1056,19 +1111,19 @@ class MyClient(discord.Client):
 
                     #welcome
                     elif messlist[0] == p + "welcome":
-                        if messlist[1] == "leave":
+                        if "<#" in messlist[1]:
+                            infoguild["welcome"][3] = getid(messlist[1])
+                            embed = discord.Embed(title="Set welcome channel", description=f"<#{getid(messlist[1])}>", colour=infoguild["color"])
+                            await message.channel.send(content=None, embed=embed)
+                            saveconfig(infoguild, message.guild.id)
+                        elif "<@&" in messlist[1] or getid(messlist[1]):
+                            infoguild["welcome"][2] = getid(messlist[1])
+                            embed = discord.Embed(title="Set welcome role", description=f"<@&{getid(messlist[1])}>", colour=infoguild["color"])
+                            await message.channel.send(content=None, embed=embed)
+                            saveconfig(infoguild, message.guild.id)
+                        elif messlist[1] == "leave":
                             infoguild["welcome"][1] = sortname(messlist, 2)
                             embed = discord.Embed(title="Set leave message", description=sortname(messlist, 2), colour=infoguild["color"])
-                            await message.channel.send(content=None, embed=embed)
-                            saveconfig(infoguild, message.guild.id)
-                        elif messlist[1] == "role":
-                            infoguild["welcome"][2] = getid(messlist[2])
-                            embed = discord.Embed(title="Set welcome role", description=f"<@&{getid(messlist[2])}>", colour=infoguild["color"])
-                            await message.channel.send(content=None, embed=embed)
-                            saveconfig(infoguild, message.guild.id)
-                        elif messlist[1] == "channel":
-                            infoguild["welcome"][3] = getid(messlist[2])
-                            embed = discord.Embed(title="Set welcome channel", description=f"<#{getid(messlist[2])}>", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
                             saveconfig(infoguild, message.guild.id)
                         else:
@@ -1183,9 +1238,13 @@ class MyClient(discord.Client):
                                 embed = discord.Embed(title="Successfully set", description=f"<#{getid(messlist[1])}> as the starboard channel", colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
                             elif "<:" in messlist[1].lower() or len(messlist[1].lower()) == 1:
-                                infoguild["star"][2] = messlist[1]
+                                if messlist[1] in infoguild["star"][2]:
+                                    infoguild["star"][2].remove(messlist[1])
+                                    embed = discord.Embed(title="Successfully removed", description=f"{messlist[1]} from the star emojis", colour=infoguild["color"])
+                                else:
+                                    infoguild["star"][2].append(messlist[1])
+                                    embed = discord.Embed(title="Successfully added", description=f"{messlist[1]} to the star emojis", colour=infoguild["color"])
                                 saveconfig(infoguild, message.guild.id)
-                                embed = discord.Embed(title="Successfully set", description=f"{messlist[1]} as the star emoji", colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
                             else:
                                 embed = discord.Embed(title="Could no setup starboard", description="check the command syntax and my perms", colour=infoguild["color"])
