@@ -1247,7 +1247,7 @@ class MyClient(discord.Client):
                                 saveconfig(infoguild, message.guild.id)
                                 await message.channel.send(content=None, embed=embed)
                             else:
-                                embed = discord.Embed(title="Could no setup starboard", description="check the command syntax and my perms", colour=infoguild["color"])
+                                embed = discord.Embed(title="Could not setup starboard", description="check the command syntax and my perms", colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
 
         #dms
