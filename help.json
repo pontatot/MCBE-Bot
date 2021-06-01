@@ -1,14 +1,17 @@
 [
     [
-        "application|Gives infos about applications",
-        "layout|Gives the application layout",
+        "Basic help page",
         "say [channel(optional)] [message]|Makes the bot say what you input",
         "users|Gives number of members in the server",
-        "logo|sends TechTonic's logo",
+        "logo|sends the bot's logo",
         "av [member(optional)]|sends the pfp of the user or yourself",
         "invite|sends the bot invite link",
         "nick [user(optional)] [name]|Changes the nickname, doesn't work on the server owner and on people that have a higher role than the bot",
         "whois [user(optional)]|sends info about the user",
+        "emoji|react with an emote to get the image"
+    ],
+    [
+        "Admin help page",
         "vote [location] [message]|Launch a poll in the designated vote channel (app/application for member apps, nothing for regular vote) with thumb up and down reactions (smp members command)",
         "embed [channel(optional)] [message]|Makes the bot embed what you input with the color of your choice (admin command)",
         "edit [type] [message_link] [new message]|edits the given message, type embed in [type] if you want to edit an embedded message or nothing for a regular message (admin command)",
@@ -16,36 +19,36 @@
         "react [message_link] [emoji]|reacts to the message with the emoji, make sure the bot is in the server the emoji is from, can be animated (admin command)",
         "role [member] [role]|adds/removes a [role] from the [member] depending on if he has it already or not",
         "kick [user] [reason(optional)]|kicks a user from the server (admin command)",
-        "ban [user] [reason(optional)]|bans a user from the server (admin command)",
-        "unban [user]|unbans a user from the server (admin command)",
+        "ban/unban [user] [reason(optional)]|bans a user from the server (admin command)",
         "clear [number]|Delete a certain amount of messages (admin command)",
-        "mute [user]|Mute someone by removing the messages he sends (admin command)",
-        "unmute [user]|Remove someone from the muted list (admin command)",
-        "spam [number] [message]|sends the number of messages input (admin command)",
-        "dm|send the bot dm compatibility help page"
+        "mute/unmute [user]|Mute/unmute someone by removing the messages he sends (admin command)"
     ],
     [
+        "Dm help page",
         "say [message]|Makes the bot say what you input without mentionning your name",
-        "embed [color(optional)] [message]|Makes the bot embed what you input with the color of your choice"
+        "embed [color(optional)] [message]|Makes the bot embed what you input with the color of your choice",
+        "logo|sends the bot's logo",
+        "invite|sends the bot invite link",
+        "av [member(optional)]|sends the pfp of the user or yourself"
     ],
     [
+        "Setup help page",
         "color [color_code]|changes the embed default color",
-        "prefixadd [prefix]|adds the prefix to the prefix list",
-        "prefixremove [prefix]|removes the prefix from the prefix list",
+        "prefix [prefix]|adds/removes a prefix",
         "op [role]|adds a role to the bot admin list",
         "unop [role]|removes a role from the bot admin list",
         "setvote [location] [channel]|changes the voting channel, input app or application for the member application votes or nothing for other",
         "welcome leave [message]|changes the bot's leaving message, use {ping} to ping the member, {name} for the member name, {guild} for the server name or {number} for the server's amount of members",
         "welcome [object]|object: role (id or mention), sets the role which will be given upong joining message. channel (mention so #channel), sets the welcome channel. message, changes the bot's welcome message, use {ping}: ping member, {name}: member name, {guild}: server name, {number}: server's amount of members",
-        "blacklist [channel]|blacklist a channel from logging/commands",
+        "blacklist [channel]|blacklist/unblacklist a channel from logging/commands",
         "command [command_name] [embed?] [answer]|adds a custom command add embed between the command name and answer to make it embedded (admin command)",
         "removecommand [command_name]|removes a custom command",
         "reset|resets the configuration of the server",
-        "logs|brings the logs help page",
         "reactionrole [message_link] [emoji] [role]|Creates a custom reaction role [message_link] is the message on which you need to react with the [emoji] to get the [role]",
-        "starboard [object]|object: #channel (the channel starred messages will get sent to), number (the amount of stars required to get on starboard), emoji (adds or remove emojis that will count, a star by default)"
+        "starboard [object]|object: #channel (the channel starred messages will get sent to), number (the amount of stars required to get on starboard), emoji (the emoji, a star by default)"
     ],
     [
+        "Logs help page",
         "logs channel [channel]|sets the log channel",
         "logs add [log_type]|enables the log_type, can be (messages, nick, member_role, joins, user, guild, guild_role, emojis, bans)",
         "logs add all|enables all log types",

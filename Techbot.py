@@ -12,7 +12,7 @@ with open("infos.json", "r") as help_file:
 act = infos["status"]
 owner = infos["owner"]
 with open("help.json", "r") as help_file:
-    infos["help"] = json.load(help_file)
+    help = json.load(help_file)
 
 
 #utility
@@ -313,9 +313,10 @@ class MyClient(discord.Client):
         channel = self.get_channel(payload.channel_id)
         guild = channel.guild
         infoguild = openconfig(guild.id)
+        mess = await channel.fetch_message(payload.message_id)
 
-        #ignore channel
-        if payload.channel_id in infoguild["blackchannels"]:
+        #ignore
+        if payload.channel_id in infoguild["blackchannels"] or mess.author.bot:
             return
         
         #logs message edited
@@ -344,7 +345,7 @@ class MyClient(discord.Client):
         guild = self.get_guild(payload.guild_id)
         infoguild = openconfig(guild.id)
 
-        #ignore channel
+        #ignore
         if payload.channel_id in infoguild["blackchannels"]:
             return
 
@@ -387,12 +388,34 @@ class MyClient(discord.Client):
     async def on_raw_reaction_add(self, payload):
         guild = self.get_guild(payload.guild_id)
         infoguild = openconfig(guild.id)
+        mess = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
         #reaction role
         if len(infoguild["reactrole"]) >= 1:
             for i in infoguild["reactrole"]:
                 if i[0] == payload.channel_id and i[1] == payload.message_id and str(payload.emoji) in i[2]:
                     await payload.member.add_roles(guild.get_role(i[3]))
+
+        #enlarge
+        if mess.content == "react with the emoji you want to get":
+            emote=payload.emoji.url
+            if not emote:
+                emote = str(payload.emoji)
+            await mess.edit(content=emote)
+
+        #help
+        if "Help page: " in mess.content and mess.author.id == self.user.id and payload.user_id != self.user.id:
+            number = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣"]
+            for b in range(len(number)):
+                if str(payload.emoji) == number[b]:
+                    try:
+                        await mess.reactions[b].remove(self.get_user(payload.user_id))
+                    except:
+                        print()
+                    embed = discord.Embed(title=help[b][0], description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
+                    for i in range(1, len(help[b])):
+                        embed.add_field(name="TT" + help[b][i].split("|")[0], value=help[b][i].split("|")[1])
+                    await mess.edit(content=f"Help page: {number[b]}", embed=embed)
 
         #starboard
         if infoguild["star"][1] and str(payload.emoji) in infoguild["star"][2]:
@@ -405,7 +428,6 @@ class MyClient(discord.Client):
                 f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
                 json.dump(star, f)
                 f.close()
-            mess = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
             userid = {}
             for i in mess.reactions:
                 if str(i) in infoguild["star"][2]:
@@ -471,6 +493,7 @@ class MyClient(discord.Client):
     async def on_raw_reaction_remove(self, payload):
         guild = self.get_guild(payload.guild_id)
         infoguild = openconfig(guild.id)
+        mess = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
         #reaction role
         if len(infoguild["reactrole"]) >= 1:
@@ -590,6 +613,7 @@ class MyClient(discord.Client):
             if message.content.strip(" ") == "<@782922227397689345>" or message.content.strip(" ") == "<@!782922227397689345>":
                 embed = discord.Embed(title="My prefix are", description=f"{infoguild['prefix']}", colour=infoguild["color"])
                 await message.channel.send(content=None, embed=embed)
+                return
             if p in messlist[0]:
                 messlist[0] = p + messlist[0].replace(p, "").lower()
                 print(messlist[0])
@@ -727,6 +751,18 @@ class MyClient(discord.Client):
                     embed = discord.Embed(title="", description=f"**{member.mention} / {member.name}#{member.discriminator}**\n\n**creation:** {member.created_at.strftime('%m/%d/%Y')}\n**joined:** {member.joined_at.strftime('%m/%d/%Y')}\n**id:** {member.id}\n**roles:** {roles}\n**type:** {type}", colour=infoguild["color"])
                     embed.set_thumbnail(url=member.avatar_url)
                     await message.channel.send(content=None, embed=embed)
+
+                #help
+                if messlist[0] == p + "help":
+                    embed = discord.Embed(title=help[0][0], description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
+                    for i in range(1, len(help[0])):
+                        embed.add_field(name=p + help[0][i].split("|")[0], value=help[0][i].split("|")[1])
+                    mess = await message.channel.send(content="Help page: 1️⃣", embed=embed)
+                    await mess.add_reaction("1️⃣")
+                    await mess.add_reaction("2️⃣")
+                    await mess.add_reaction("3️⃣")
+                    await mess.add_reaction("4️⃣")
+                    await mess.add_reaction("5️⃣")
 
                 #nicks
                 elif messlist[0] == p + "nick":
@@ -1057,15 +1093,39 @@ class MyClient(discord.Client):
                     #setup help
                     elif messlist[0] == p + "setup":
                         embed = discord.Embed(title="SETUP help page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
-                        for i in range(len(infos["help"][2])):
-                            embed.add_field(name=p + infos["help"][2][i].split("|")[0], value=infos["help"][2][i].split("|")[1])
+                        
                         adminlist = ""
                         for i in range(len(infoguild["admins"])):
                             adminlist = adminlist + f'<@&{int(infoguild["admins"][i])}>'
                         blackchannels = ""
                         for i in range(len(infoguild["blackchannels"])):
                             blackchannels = blackchannels + f'<#{int(infoguild["blackchannels"][i])}>'
-                        embed.add_field(name="current configuration", value=f'color: {infoguild["color"]}\nprefix: {infoguild["prefix"]}\nadmins: {adminlist}\nvote: <#{int(infoguild["vote"][0])}>\napp vote: <#{int(infoguild["vote"][1])}>\nwelcome message: {infoguild["welcome"][0]}\nyeet message: {infoguild["welcome"][1]}\nblacklisted channels: {blackchannels}\nstarboard: <#{infoguild["star"][0]}> with {infoguild["star"][1]} {infoguild["star"][2]}')
+                        embed.add_field(name="General config", value=f'color: {infoguild["color"]}\nprefix: {infoguild["prefix"]}\nadmins: {adminlist}\nvote: <#{int(infoguild["vote"][0])}>\napp vote: <#{int(infoguild["vote"][1])}>\nblacklisted channels: {blackchannels}\nstarboard: <#{infoguild["star"][0]}> with {infoguild["star"][1]} {infoguild["star"][2]}')
+                        log = ""
+                        for i in infoguild["logs"][1]:
+                            if infoguild["logs"][1][i]:
+                                log += f'{i}: <:check:845741031344963605>\n'
+                            else:
+                                log += f'{i}: <:cross:845741065306112040>\n'
+                        embed.add_field(name="Logs", value=f"channel: <#{infoguild['logs'][0]}>\n" + log)
+                        rr = ""
+                        for i in infoguild["reactrole"]:
+                            channel2 = self.get_channel(i[0])
+                            message2 = await channel2.fetch_message(i[1])
+                            rr += f"{channel2.mention} [message]({message2.jump_url}) - {i[2]} <@&{i[3]}>\n"
+                        embed.add_field(name="Reaction roles", value=rr)
+                        cc = ""
+                        for i in range(len(infoguild["command"][0])):
+                            cc += f'{p}{infoguild["command"][0][i]} {str(infoguild["command"][2][i]).replace("0", "").replace("1", "embed")} {infoguild["command"][1][i]}\n'
+                        embed.add_field(name="Custom commands", value=cc)
+                        if infoguild["welcome"][3] == 0:
+                            if message.guild.system_channel:
+                                welcchannel = message.guild.system_channel.mention
+                            else:
+                                welcchannel = "disabled"
+                        else:
+                            welcchannel = f'<#{["welcome"][3]}>'
+                        embed.add_field(name="Welcome", value=f'channel: {welcchannel}\nwelcome message: {infoguild["welcome"][0]}\nleave message: {infoguild["welcome"][1]}')
                         await message.channel.send(content=None, embed=embed)
 
                     #resets server config
@@ -1171,10 +1231,16 @@ class MyClient(discord.Client):
                     #blacklist
                     elif messlist[0] == p + "blacklist":
                         channel = getid(messlist[1])
-                        infoguild["blackchannels"].append(channel)
-                        embed = discord.Embed(title="Blacklisted channel", description=f"<#{channel}>", colour=infoguild["color"])
-                        await message.channel.send(content=None, embed=embed)
-                        saveconfig(infoguild, message.guild.id)
+                        if channel not in infoguild["blackchannels"]:
+                            infoguild["blackchannels"].append(channel)
+                            embed = discord.Embed(title="Blacklisted channel", description=f"<#{channel}>", colour=infoguild["color"])
+                            await message.channel.send(content=None, embed=embed)
+                            saveconfig(infoguild, message.guild.id)
+                        else:
+                            infoguild["blackchannels"].remove(channel)
+                            embed = discord.Embed(title="Unblacklisted channel", description=f"<#{channel}>", colour=infoguild["color"])
+                            await message.channel.send(content=None, embed=embed)
+                            saveconfig(infoguild, message.guild.id)
 
                     #logs
                     elif messlist[0] == p + "logs" or messlist[0] == p + "log":
@@ -1223,28 +1289,10 @@ class MyClient(discord.Client):
                                             await message.channel.send(content=None, embed=embed)
                             else:
                                 #logs help page
-                                embed = discord.Embed(title="Logs help page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
-                                for i in range(len(infos["help"][3])):
-                                    embed.add_field(name=p + infos["help"][3][i].split("|")[0], value=infos["help"][3][i].split("|")[1])
-                                log = ""
-                                for i in infoguild["logs"][1]:
-                                    if infoguild["logs"][1][i]:
-                                        log += f'{i}: <:check:845741031344963605>\n'
-                                    else:
-                                        log += f'{i}: <:cross:845741065306112040>\n'
-                                embed.add_field(name="current config", value=f"channel: <#{infoguild['logs'][0]}>\n" + log)
+                                embed = discord.Embed(title="Logs error", description=f"Check {p}help to check the command syntax", colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
                         except:
-                            embed = discord.Embed(title="Logs help page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
-                            for i in range(len(infos["help"][3])):
-                                embed.add_field(name=p + infos["help"][3][i].split("|")[0], value=infos["help"][3][i].split("|")[1])
-                            log = ""
-                            for i in infoguild["logs"][1]:
-                                if infoguild["logs"][1][i]:
-                                    log += f'{i}: <:check:845741031344963605>\n'
-                                else:
-                                    log += f'{i}: <:cross:845741065306112040>\n'
-                            embed.add_field(name="current config", value=f"channel: <#{infoguild['logs'][0]}>\n" + log)
+                            embed = discord.Embed(title="Logs error", description=f"Check {p}help to check the command syntax", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
 
                     #reaction role
@@ -1320,20 +1368,6 @@ class MyClient(discord.Client):
                 embed = discord.Embed(title="", description=f"{round(self.latency * 1000)} ms", colour=infoguild["color"])
                 await message.channel.send(content=None, embed=embed)
 
-            #help page
-            if messlist[0] == p + "help":
-                embed = discord.Embed(title="Help page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
-                for i in range(len(infos["help"][0])):
-                    embed.add_field(name=p + infos["help"][0][i].split("|")[0], value=infos["help"][0][i].split("|")[1])
-                await message.channel.send(content=None, embed=embed)
-
-            #dm help
-            elif messlist[0] == p + "dm":
-                embed = discord.Embed(title="DM Help page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
-                for i in range(len(infos["help"][1])):
-                    embed.add_field(name=p + infos["help"][1][i].split("|")[0], value=infos["help"][1][i].split("|")[1])
-                await message.channel.send(content=None, embed=embed)
-
             #application help
             elif messlist[0] == p + "application" or messlist[0] == p + "app" or message.content == p + "a":
                 embed = discord.Embed(title="Application help", description=application[0], colour=infoguild["color"])
@@ -1347,6 +1381,11 @@ class MyClient(discord.Client):
                 embed = discord.Embed(title="Logo", description="", colour=infoguild["color"])
                 embed.set_image(url=self.user.avatar_url)
                 await message.channel.send(content=None, embed=embed)
+
+            #emoji
+            elif messlist[0] == p + "emoji":
+                await message.delete()
+                await message.channel.send("react with the emoji you want to get")
 
             #av
             elif messlist[0] == p + "av" or messlist[0] == p + "avatar":
@@ -1362,7 +1401,7 @@ class MyClient(discord.Client):
 
             #invite
             elif messlist[0] == p + "invite":
-                embed = discord.Embed(title="Invite link", description="nvite link: [click here](https://discordapp.com/oauth2/authorize?client_id=782922227397689345&scope=bot&permissions=1073217110)\njoin this server to get help: [click here](https://discord.gg/q6HFJwv7gA)\nDM bot owner: <@630919091015909386>\nsource code: [click here](https://github.com/MCBE-Craft/MCBE-Bot)", colour=infoguild["color"])
+                embed = discord.Embed(title="Invite link", description="Invite link: [click here](https://discordapp.com/oauth2/authorize?client_id=782922227397689345&scope=bot&permissions=1073217110)\nJoin this server to get help: [click here](https://discord.gg/q6HFJwv7gA)\nDM bot owner: <@630919091015909386>\nSource code: [click here](https://github.com/MCBE-Craft/MCBE-Bot)", colour=infoguild["color"])
                 await message.channel.send(content=None, embed=embed)
 
 intents = discord.Intents.default()
