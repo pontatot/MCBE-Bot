@@ -309,44 +309,80 @@ class MyClient(discord.Client):
             embed.set_thumbnail(url=user.avatar_url)
             await channel.send(content=None, embed=embed)
 
-    async def on_message_edit(self, before, after):
-        guild = before.guild
+    async def on_raw_message_edit(self, payload):
+        channel = self.get_channel(payload.channel_id)
+        guild = channel.guild
         infoguild = openconfig(guild.id)
 
         #ignore channel
-        if before.channel.id in infoguild["blackchannels"]:
+        if payload.channel_id in infoguild["blackchannels"]:
             return
         
         #logs message edited
-        if infoguild["logs"][0] != 0 and infoguild["logs"][1]["messages"] == 1 and not before.author.bot:
+        if infoguild["logs"][0] != 0 and infoguild["logs"][1]["messages"] == 1:
             channel = self.get_channel(infoguild["logs"][0])
-            if before.content != after.content:
-                embed = discord.Embed(title="Message edited", description=f"Target: {before.author.mention}\n\n{before.channel.mention} [click to jump]({after.jump_url}):\n{before.content} -> {after.content}", colour=infoguild["color"])
-                embed.set_thumbnail(url=before.author.avatar_url)
-                if len(before.attachments) >= 1:
-                    for i in before.attachments:
+            message = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
+            if payload.cached_message:
+                if payload.cached_message.content != message.content:
+                    embed = discord.Embed(title="Message edited", description=f"Target: {message.author.mention}\n\n<#{payload.channel_id}> [click to jump]({message.jump_url}):\n{payload.cached_message.content} -> {message.content}", colour=infoguild["color"])
+                    embed.set_thumbnail(url=message.author.avatar_url)
+                    if len(message.attachments) >= 1:
+                        for i in message.attachments:
+                            if list(i.filename.split("."))[-1].lower() in "pngsvgjpgjpegif":
+                                embed.set_image(url=i.url)
+                    await channel.send(content=None, embed=embed)
+            else:
+                embed = discord.Embed(title="Message edited", description=f"Target: {message.author.mention}\n\n<#{payload.channel_id}> [click to jump]({message.jump_url}):\nNot cached -> {message.content}", colour=infoguild["color"])
+                embed.set_thumbnail(url=message.author.avatar_url)
+                if len(message.attachments) >= 1:
+                    for i in message.attachments:
                         if list(i.filename.split("."))[-1].lower() in "pngsvgjpgjpegif":
                             embed.set_image(url=i.url)
                 await channel.send(content=None, embed=embed)
 
-    async def on_message_delete(self, message):
-        guild = message.guild
+    async def on_raw_message_delete(self, payload):
+        guild = self.get_guild(payload.guild_id)
         infoguild = openconfig(guild.id)
 
         #ignore channel
-        if message.channel.id in infoguild["blackchannels"]:
+        if payload.channel_id in infoguild["blackchannels"]:
             return
 
         #logs message deleted
-        if infoguild["logs"][0] != 0 and infoguild["logs"][1]["messages"] == 1 and not message.author.bot:
+        if infoguild["logs"][0] != 0 and infoguild["logs"][1]["messages"] == 1:
             channel = self.get_channel(infoguild["logs"][0])
-            embed = discord.Embed(title="Message deleted", description=f"Target: {message.author.mention}\n\n{message.channel.mention} - {message.content}", colour=infoguild["color"])
-            embed.set_thumbnail(url=message.author.avatar_url)
-            if len(message.attachments) >= 1:
-                for i in message.attachments:
-                    if list(i.filename.split("."))[-1].lower() in "pngsvgjpgjpegif":
-                        embed.set_image(url=i.url)
+            if payload.cached_message:
+                embed = discord.Embed(title="Message deleted", description=f"Target: {payload.cached_message.author.mention}\n\n{payload.cached_message.channel.mention} - {payload.cached_message.content}", colour=infoguild["color"])
+                embed.set_thumbnail(url=payload.cached_message.author.avatar_url)
+                if len(payload.cached_message.attachments) >= 1:
+                    for i in payload.cached_message.attachments:
+                        if list(i.filename.split("."))[-1].lower() in "pngsvgjpgjpegif":
+                            embed.set_image(url=i.url)
+            else:
+                embed = discord.Embed(title="Message deleted", description=f"Target: <#{payload.channel_id}>\n\nNot cached", colour=infoguild["color"])
+                embed.set_thumbnail(url=guild.icon_url)
             await channel.send(content=None, embed=embed)
+
+    async def on_raw_bulk_message_delete(self, payload):
+        guild = self.get_guild(payload.guild_id)
+        infoguild = openconfig(guild.id)
+
+        #ignore channel
+        if payload.channel_id in infoguild["blackchannels"]:
+            return
+
+        #logs message deleted
+        channel2 = self.get_channel(infoguild["logs"][0])
+        if infoguild["logs"][0] != 0 and infoguild["logs"][1]["messages"] == 1:
+            if payload.cached_messages:
+                messages = ""
+                for i in payload.cached_messages:
+                    messages = messages + "\n>" + i.author.mention + ": " + i.content 
+                embed = discord.Embed(title="Bulk message delete", description=f"Target: {payload.cached_messages[0].channel.mention}\n\n{len(payload.cached_messages)} messages deleted\n{messages}", colour=infoguild["color"])
+            else:
+                embed = discord.Embed(title="Bulk message delete", description=f"Target: <#{payload.channel_id}>\n\n{len(payload.message_ids)} messages deleted\nNo cache", colour=infoguild["color"])
+            embed.set_thumbnail(url=guild.icon_url)
+            await channel2.send(content=None, embed=embed)
 
     async def on_raw_reaction_add(self, payload):
         guild = self.get_guild(payload.guild_id)
@@ -411,13 +447,13 @@ class MyClient(discord.Client):
 
             #starring starboard
             elif channel == mess.channel:
-                message = mess
                 messageid = 0
                 for i in star:
                     if star[i][0] == payload.message_id:
                         messageid = i
+                message = await mess.channel_mentions[0].fetch_message(int(messageid))
                 userid = star[str(messageid)][1]
-                for i in message.reactions:
+                for i in mess.reactions:
                     if str(i) in infoguild["star"][2]:
                         users = await i.users().flatten()
                         for i in users:
@@ -425,12 +461,12 @@ class MyClient(discord.Client):
                 star[messageid][1] = userid
                 f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
                 json.dump(star, f)
-                embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\n{mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
-                embed.set_thumbnail(url=mess.author.avatar_url)
+                embed = discord.Embed(title="", description=f"Author: {message.author.mention} {message.author.name}#{message.author.discriminator}\n\n{message.content}\n\n[Jump to Message]({message.jump_url})", colour=infoguild["color"])
+                embed.set_thumbnail(url=message.author.avatar_url)
                 if len(mess.attachments) >= 1:
                     for i in mess.attachments:
                         embed.set_image(url=i.url)
-                await message.edit(content=f"**{len(userid)} | {mess.channel.mention}**", embed=embed)
+                await mess.edit(content=f"**{len(userid)} | {message.channel.mention}**", embed=embed)
 
     async def on_raw_reaction_remove(self, payload):
         guild = self.get_guild(payload.guild_id)
@@ -1247,7 +1283,7 @@ class MyClient(discord.Client):
                                 saveconfig(infoguild, message.guild.id)
                                 await message.channel.send(content=None, embed=embed)
                             else:
-                                embed = discord.Embed(title="Could no setup starboard", description="check the command syntax and my perms", colour=infoguild["color"])
+                                embed = discord.Embed(title="Could not setup starboard", description="check the command syntax and my perms", colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
 
         #dms
