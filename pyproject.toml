@@ -9,6 +9,8 @@ python = "^3.8"
 discord = "^1.0.1"
 flask = "^2.0.1"
 PyNaCl = "^1.4.0"
+youtube_dl = "^2021.5.16"
+ffmpeg = "^1.4"
 
 [tool.poetry.dev-dependencies]
 

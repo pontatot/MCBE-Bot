@@ -2,6 +2,7 @@ import discord
 import json
 import os
 from keep_alive import keep_alive
+import youtube_dl
 
 #load infos
 with open("app.txt") as app_file:
@@ -204,6 +205,47 @@ class MyClient(discord.Client):
                 embed.set_thumbnail(url=before.icon_url)
                 await channel.send(content=None, embed=embed)
 
+    async def on_guild_channel_create(self, channel):
+        guild = channel.guild
+        infoguild = openconfig(guild.id)
+
+        #logs channel creation
+        if infoguild["logs"][0] != 0 and infoguild["logs"][1]["channels"] == 1:
+            channel = self.get_channel(infoguild["logs"][0])
+            embed = discord.Embed(title="Channel created", description=f"Target: {guild.name}\n\n{channel.mention} in {channel.category.mention}", colour=infoguild["color"])
+            embed.set_thumbnail(url=guild.icon_url)
+            await channel.send(content=None, embed=embed)
+
+    async def on_guild_channel_delete(self, channel):
+        guild = channel.guild
+        infoguild = openconfig(guild.id)
+
+        #logs channel deletion
+        if infoguild["logs"][0] != 0 and infoguild["logs"][1]["channels"] == 1:
+            channel = self.get_channel(infoguild["logs"][0])
+            embed = discord.Embed(title="Role deleted", description=f"Target: {guild.name}\n\n#{channel.name} from {channel.category.mention}", colour=infoguild["color"])
+            embed.set_thumbnail(url=guild.icon_url)
+            await channel.send(content=None, embed=embed)
+
+    async def on_guild_channel_update(self, before, after):
+        guild = before.guild
+        infoguild = openconfig(guild.id)
+
+        #logs channel creation
+        if infoguild["logs"][0] != 0 and infoguild["logs"][1]["channels"] == 1:
+            channel = self.get_channel(infoguild["logs"][0])
+            #category change
+            if before.category != after.category:
+                embed = discord.Embed(title="Channel moved", description=f"Target: {before.mention}\n\n{before.category.mention} -> {after.category.mention}", colour=infoguild["color"])
+                embed.set_thumbnail(url=guild.icon_url)
+                await channel.send(content=None, embed=embed)
+
+            #name
+            if before.name != after.name:
+                embed = discord.Embed(title="Channel renamed", description=f"Target: {before.mention}\n\n{before.name} -> {after.name}", colour=infoguild["color"])
+                embed.set_thumbnail(url=guild.icon_url)
+                await channel.send(content=None, embed=embed)
+
     async def on_guild_role_create(self, role):
         guild = role.guild
         infoguild = openconfig(guild.id)
@@ -222,7 +264,7 @@ class MyClient(discord.Client):
         #logs role deletion
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["guild_role"] == 1:
             channel = self.get_channel(infoguild["logs"][0])
-            embed = discord.Embed(title="Role deleted", description=f"Target: {guild.name}\n\n{role.name}", colour=infoguild["color"])
+            embed = discord.Embed(title="Role deleted", description=f"Target: {guild.name}\n\n@{role.name}", colour=infoguild["color"])
             embed.set_thumbnail(url=guild.icon_url)
             await channel.send(content=None, embed=embed)
     
@@ -460,12 +502,7 @@ class MyClient(discord.Client):
                 star[str(payload.message_id)] = [message.id, userid]
                 f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
                 json.dump(star, f)
-                embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\n{mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
-                embed.set_thumbnail(url=mess.author.avatar_url)
-                if len(mess.attachments) >= 1:
-                    for i in mess.attachments:
-                        embed.set_image(url=i.url)
-                await message.edit(content=f"**{len(userid)} | {mess.channel.mention}**", embed=embed)
+                await message.edit(content=f"**{len(userid)} | {mess.channel.mention}**")
 
             #starring starboard
             elif channel == mess.channel:
@@ -483,12 +520,7 @@ class MyClient(discord.Client):
                 star[messageid][1] = userid
                 f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
                 json.dump(star, f)
-                embed = discord.Embed(title="", description=f"Author: {message.author.mention} {message.author.name}#{message.author.discriminator}\n\n{message.content}\n\n[Jump to Message]({message.jump_url})", colour=infoguild["color"])
-                embed.set_thumbnail(url=message.author.avatar_url)
-                if len(mess.attachments) >= 1:
-                    for i in mess.attachments:
-                        embed.set_image(url=i.url)
-                await mess.edit(content=f"**{len(userid)} | {message.channel.mention}**", embed=embed)
+                await mess.edit(content=f"**{len(userid)} | {message.channel.mention}**")
 
     async def on_raw_reaction_remove(self, payload):
         guild = self.get_guild(payload.guild_id)
@@ -533,12 +565,7 @@ class MyClient(discord.Client):
                 star[str(payload.message_id)] = [message.id, userid]
                 f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
                 json.dump(star, f)
-                embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\n{mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
-                embed.set_thumbnail(url=mess.author.avatar_url)
-                if len(mess.attachments) >= 1:
-                    for i in mess.attachments:
-                        embed.set_image(url=i.url)
-                await message.edit(content=f"**{len(userid)} | {mess.channel.mention}**", embed=embed)
+                await message.edit(content=f"**{len(userid)} | {mess.channel.mention}**")
 
             #starring starboard
             elif channel == mess.channel:
@@ -556,12 +583,7 @@ class MyClient(discord.Client):
                 star[messageid][1] = userid
                 f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
                 json.dump(star, f)
-                embed = discord.Embed(title="", description=f"Author: {mess.author.mention} {mess.author.name}#{mess.author.discriminator}\n\n{mess.content}\n\n[Jump to Message]({mess.jump_url})", colour=infoguild["color"])
-                embed.set_thumbnail(url=mess.author.avatar_url)
-                if len(mess.attachments) >= 1:
-                    for i in mess.attachments:
-                        embed.set_image(url=i.url)
-                await message.edit(content=f"**{len(userid)} | {mess.channel.mention}**", embed=embed)
+                await message.edit(content=f"**{len(userid)} | {mess.channel.mention}**")
 
 
     async def on_message(self, message):
@@ -678,9 +700,7 @@ class MyClient(discord.Client):
                                 default = openconfig()
                                 try:
                                     #update here
-                                    infoguild["star"][2] = ["\u2b50"]
-                                    with open(f"guilds/{a.id}.json", "w") as f:
-                                        json.dump(infoguild, f)
+                                    infoguild["logs"][1]["channels"] = 0
                                     #end of update
                                     saveconfig(infoguild, a.id)
                                     updated += 1
@@ -694,7 +714,7 @@ class MyClient(discord.Client):
 
                 #everyone commands
                 #number of users
-                if messlist[0] == p + "users" or message.content == p + "members":
+                if messlist[0] == p + "users" or messlist[0] == p + "members":
                     await message.delete()
                     embed = discord.Embed(title="Number of Members:", description=str(message.guild.member_count), colour=infoguild["color"])
                     await message.channel.send(content=None, embed=embed)
@@ -763,6 +783,19 @@ class MyClient(discord.Client):
                     await mess.add_reaction("3️⃣")
                     await mess.add_reaction("4️⃣")
                     await mess.add_reaction("5️⃣")
+
+                #server info
+                if messlist[0] == p + "serverinfo" or messlist[0] == p + "server":
+                    embed = discord.Embed(title=f"{message.guild.name}'s info page", description=f'prefix: {infoguild["prefix"]}', colour=infoguild["color"])
+                    embed.add_field(name="General infos", value=f'\n**Owner:** {message.guild.owner.mention}\n**Created:** {message.guild.created_at.strftime("%m/%d/%Y")}\n\n{message.guild.member_count} members\n{len(message.guild.roles)} roles\n{len(message.guild.categories)} categories\n{len(message.guild.text_channels)} channels\n{len(message.guild.voice_channels)} voice channels')
+                    server = ""
+                    for i in message.guild.categories:
+                        server += "**" + i.name + "**\n"
+                        for b in i.channels:
+                            server += "- " + b.mention + "\n"
+                    embed.add_field(name="Server Setup", value=f'\n{server}')
+                    embed.set_thumbnail(url=message.guild.icon_url)
+                    await message.channel.send(content=None, embed=embed)
 
                 #nicks
                 elif messlist[0] == p + "nick":
@@ -1001,6 +1034,7 @@ class MyClient(discord.Client):
 
                     #join vc
                     elif messlist[0] == p + "join" or messlist[0] == p + "cum":
+                        voice = discord.utils.get(self.voice_clients, guild=message.channel.guild)
                         if message.guild.voice_client:
                             embed = discord.Embed(title="Already connected to a voice channel", description="", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
@@ -1008,13 +1042,13 @@ class MyClient(discord.Client):
                             if message.author.voice:
                                 channel = message.author.voice.channel
                                 await channel.connect()
-                                embed = discord.Embed(title="Joined voice channel", description="", colour=infoguild["color"])
+                                embed = discord.Embed(title="Joined voice channel", description=message.author.voice.channel.mention, colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
                             else:
                                 try:
                                     channel = self.get_channel(getid(messlist[1]))
                                     await channel.connect()
-                                    embed = discord.Embed(title="Joined voice channel", description="", colour=infoguild["color"])
+                                    embed = discord.Embed(title="Joined voice channel", description=channel.mention, colour=infoguild["color"])
                                     await message.channel.send(content=None, embed=embed)
                                 except:
                                     embed = discord.Embed(title="Couldn't join a voice channel", description="Join a voice channel or give a channel to join", colour=infoguild["color"])
@@ -1022,6 +1056,7 @@ class MyClient(discord.Client):
 
                     #leave vc
                     elif messlist[0] == p + "leave" or messlist[0] == p + "yeet" or messlist[0] == p + "fuckoff" or messlist[0] == p + "dc":
+                        voice = discord.utils.get(self.voice_clients, guild=message.channel.guild)
                         if message.guild.voice_client:
                             await message.guild.voice_client.disconnect()
                             embed = discord.Embed(title="Left voice channel", description="", colour=infoguild["color"])
@@ -1030,21 +1065,79 @@ class MyClient(discord.Client):
                             embed = discord.Embed(title="Currently not in a voice channel", description="", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
 
-                    #play doesn't actually work
-                    elif messlist[0] == p + "play":
-                        if not message.guild.voice_client or not message.author.voice:
-                            if message.guild.voice_client:
-                                embed = discord.Embed(title="Joined voice channel", description="", colour=infoguild["color"])
-                                await message.channel.send(content=None, embed=embed)
-                            elif message.author.voice:
+                    #play
+                    elif messlist[0] == p + "play" and str(message.guild.id) in "819121115971977276847183491468492902795187736322506782761594268405989396":
+                        if not message.guild.voice_client:
+                            if message.author.voice:
                                 channel = message.author.voice.channel
                                 await channel.connect()
-                            else:
-                                embed = discord.Embed(title="Couldn't join a voice channel", description="Join a voice channel", colour=infoguild["color"])
+                                embed = discord.Embed(title="Joined voice channel", description=message.author.voice.channel.mention, colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
-                        if message.guild.voice_client and message.author.voice:
-                            embed = discord.Embed(title="Playing", description="...", colour=infoguild["color"])
+                            else:
+                                embed = discord.Embed(title="Couldn't connect to vc", description="", colour=infoguild["color"])
+                                await message.channel.send(content=None, embed=embed)
+                                return
+                        async with message.channel.typing():
+                            voice = discord.utils.get(self.voice_clients, guild=message.channel.guild)
+                            if len(messlist) >= 2:
+                                song_there = os.path.isfile("song.mp3")
+                                try:
+                                    if song_there:
+                                        os.remove("song.mp3")
+                                except PermissionError:
+                                    embed = discord.Embed(title="Can't change song", description=f"wait the end or use {p}stop", colour=infoguild["color"])
+                                    await message.channel.send(content=None, embed=embed)
+                                    return
+                                except:
+                                    embed = discord.Embed(title="uhh idk tbh", description="", colour=infoguild["color"])
+                                    await message.channel.send(content=None, embed=embed)
+                                    return
+                                embed = discord.Embed(title="Downloading video", description="", colour=infoguild["color"])
+                                mess = await message.channel.send(content=None, embed=embed)
+                                ydl_opts = {
+                                    'format': 'bestaudio/best',
+                                    'postprocessors': [{
+                                        'key': 'FFmpegExtractAudio',
+                                        'preferredcodec': 'mp3',
+                                        'preferredquality': '192'
+                                    }]
+                                }
+                                with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                                    ydl.download([messlist[1]])
+                                embed = discord.Embed(title="Video downloaded", description="Now loading file", colour=infoguild["color"])
+                                await mess.edit(content=None, embed=embed)
+                                for file in os.listdir("./"):
+                                    if file.endswith(".mp3"):
+                                        embed = discord.Embed(title="Playing", description=f'[{file.replace(".mp3", "")}]({messlist[1]})', colour=infoguild["color"])
+                                        os.rename(file, "song.mp3")
+                                voice.play(discord.FFmpegPCMAudio("song.mp3"))
+                                await mess.edit(content=None, embed=embed)
+                            else:
+                                for file in os.listdir("./"):
+                                    if file.endswith(".mp3"):
+                                        embed = discord.Embed(title="Playing", description="something", colour=infoguild["color"])
+                                        os.rename(file, "song.mp3")
+                                voice.play(discord.FFmpegPCMAudio("song.mp3"))
+                                await message.channel.send(content=None, embed=embed)
+
+                    #pause
+                    elif messlist[0] == p + "pause":
+                        voice = discord.utils.get(self.voice_clients, guild=message.channel.guild)
+                        if voice.is_playing():
+                            voice.pause()
+                            embed = discord.Embed(title="Paused", description="", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
+                        else:
+                            voice.resume()
+                            embed = discord.Embed(title="Resumed", description="", colour=infoguild["color"])
+                            await message.channel.send(content=None, embed=embed)
+
+                    #stop
+                    elif messlist[0] == p + "stop":
+                        voice = discord.utils.get(self.voice_clients, guild=message.channel.guild)
+                        voice.stop()
+                        embed = discord.Embed(title="Stopped", description="", colour=infoguild["color"])
+                        await message.channel.send(content=None, embed=embed)
 
                     #spam (pls don't abuse)
                     elif messlist[0] == p + "spam":
@@ -1090,10 +1183,9 @@ class MyClient(discord.Client):
                                     await message.channel.send(content=None, embed=embed)
                                     break
 
-                    #setup help
+                    #setup
                     elif messlist[0] == p + "setup":
-                        embed = discord.Embed(title="SETUP help page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
-                        
+                        embed = discord.Embed(title="SETUP page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
                         adminlist = ""
                         for i in range(len(infoguild["admins"])):
                             adminlist = adminlist + f'<@&{int(infoguild["admins"][i])}>'
@@ -1113,10 +1205,14 @@ class MyClient(discord.Client):
                             channel2 = self.get_channel(i[0])
                             message2 = await channel2.fetch_message(i[1])
                             rr += f"{channel2.mention} [message]({message2.jump_url}) - {i[2]} <@&{i[3]}>\n"
+                        if rr == "":
+                            rr = "None"
                         embed.add_field(name="Reaction roles", value=rr)
                         cc = ""
                         for i in range(len(infoguild["command"][0])):
                             cc += f'{p}{infoguild["command"][0][i]} {str(infoguild["command"][2][i]).replace("0", "").replace("1", "embed")} {infoguild["command"][1][i]}\n'
+                        if cc == "":
+                            cc = "None"
                         embed.add_field(name="Custom commands", value=cc)
                         if infoguild["welcome"][3] == 0:
                             if message.guild.system_channel:
@@ -1124,8 +1220,8 @@ class MyClient(discord.Client):
                             else:
                                 welcchannel = "disabled"
                         else:
-                            welcchannel = f'<#{["welcome"][3]}>'
-                        embed.add_field(name="Welcome", value=f'channel: {welcchannel}\nwelcome message: {infoguild["welcome"][0]}\nleave message: {infoguild["welcome"][1]}')
+                            welcchannel = f'<#{infoguild["welcome"][3]}>'
+                        embed.add_field(name="Welcome", value=f'channel: {welcchannel}\nrole: <@&{infoguild["welcome"][2]}>\nwelcome message: {infoguild["welcome"][0]}\nleave message: {infoguild["welcome"][1]}')
                         await message.channel.send(content=None, embed=embed)
 
                     #resets server config
@@ -1155,10 +1251,10 @@ class MyClient(discord.Client):
                                 embed = discord.Embed(title="Color has been changed to", description=infoguild['color'], colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
                             else:
-                                embed = discord.Embed(title="Invalid color number", description="Make sure to preovide an integer from 0 to 16777215", colour=infoguild["color"])
+                                embed = discord.Embed(title="Invalid color number", description="Make sure to provide an integer from 0 to 16777215", colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
                         except:
-                            embed = discord.Embed(title="Invalid color number", description="Make sure to preovide an integer from 0 to 16777215", colour=infoguild["color"])
+                            embed = discord.Embed(title="Invalid color number", description="Make sure to provide an integer from 0 to 16777215", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
 
                     #adds a prefix
@@ -1358,6 +1454,11 @@ class MyClient(discord.Client):
         #bot being pinged
         if "847217821917904917>" in message.content:
             await message.channel.send("https://cdn.discordapp.com/emojis/823170480143204383.gif?v=1")
+        
+        #I'm
+        if "i'm" in messlist[0].lower():
+            mention = discord.AllowedMentions(replied_user=False)
+            await message.reply(content=f"Hi {sortname(messlist)} I'm MCBE Bot", allowed_mentions=mention)
 
         #everywhere commands (dms + servers)
         if p in messlist[0]:
@@ -1365,8 +1466,9 @@ class MyClient(discord.Client):
 
             #ping
             if messlist[0] == p + "ping":
-                embed = discord.Embed(title="", description=f"{round(self.latency * 1000)} ms", colour=infoguild["color"])
-                await message.channel.send(content=None, embed=embed)
+                embed = discord.Embed(title="Pong", description=f"{round(self.latency * 1000)} ms", colour=infoguild["color"])
+                mention = discord.AllowedMentions(replied_user=False)
+                await message.reply(content=None, embed=embed, allowed_mentions=mention)
 
             #application help
             elif messlist[0] == p + "application" or messlist[0] == p + "app" or message.content == p + "a":

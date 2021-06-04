@@ -33,7 +33,8 @@
             "guild": 0,
             "guild_role": 0,
             "emojis": 0,
-            "bans": 0
+            "bans": 0,
+            "channels": 0
         }
     ],
     "reactrole": [],
