@@ -3,6 +3,8 @@ import json
 import os
 from keep_alive import keep_alive
 import youtube_dl
+import time
+import random
 
 #load infos
 with open("app.txt") as app_file:
@@ -462,14 +464,15 @@ class MyClient(discord.Client):
         #starboard
         if infoguild["star"][1] and str(payload.emoji) in infoguild["star"][2]:
             try:
-                f = open(f"star/{guild.id}.json", "r", encoding = "utf-8")
+                f = open(f"star/{payload.guild_id}.json", "r", encoding = "utf-8")
                 star = json.load(f)
             except:
                 #initialization
                 star = {}
-                f = open(f"star/{guild.id}.json", "w", encoding = "utf-8")
+                f = open(f"star/{payload.guild_id}.json", "w", encoding = "utf-8")
                 json.dump(star, f)
                 f.close()
+                return
             userid = {}
             for i in mess.reactions:
                 if str(i) in infoguild["star"][2]:
@@ -700,7 +703,6 @@ class MyClient(discord.Client):
                                 default = openconfig()
                                 try:
                                     #update here
-                                    infoguild["logs"][1]["channels"] = 0
                                     #end of update
                                     saveconfig(infoguild, a.id)
                                     updated += 1
@@ -788,12 +790,6 @@ class MyClient(discord.Client):
                 if messlist[0] == p + "serverinfo" or messlist[0] == p + "server":
                     embed = discord.Embed(title=f"{message.guild.name}'s info page", description=f'prefix: {infoguild["prefix"]}', colour=infoguild["color"])
                     embed.add_field(name="General infos", value=f'\n**Owner:** {message.guild.owner.mention}\n**Created:** {message.guild.created_at.strftime("%m/%d/%Y")}\n\n{message.guild.member_count} members\n{len(message.guild.roles)} roles\n{len(message.guild.categories)} categories\n{len(message.guild.text_channels)} channels\n{len(message.guild.voice_channels)} voice channels')
-                    server = ""
-                    for i in message.guild.categories:
-                        server += "**" + i.name + "**\n"
-                        for b in i.channels:
-                            server += "- " + b.mention + "\n"
-                    embed.add_field(name="Server Setup", value=f'\n{server}')
                     embed.set_thumbnail(url=message.guild.icon_url)
                     await message.channel.send(content=None, embed=embed)
 
@@ -1035,24 +1031,14 @@ class MyClient(discord.Client):
                     #join vc
                     elif messlist[0] == p + "join" or messlist[0] == p + "cum":
                         voice = discord.utils.get(self.voice_clients, guild=message.channel.guild)
-                        if message.guild.voice_client:
-                            embed = discord.Embed(title="Already connected to a voice channel", description="", colour=infoguild["color"])
+                        if message.author.voice:
+                            channel = message.author.voice.channel
+                            await channel.connect()
+                            embed = discord.Embed(title="Joined voice channel", description=message.author.voice.channel.mention, colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
                         else:
-                            if message.author.voice:
-                                channel = message.author.voice.channel
-                                await channel.connect()
-                                embed = discord.Embed(title="Joined voice channel", description=message.author.voice.channel.mention, colour=infoguild["color"])
-                                await message.channel.send(content=None, embed=embed)
-                            else:
-                                try:
-                                    channel = self.get_channel(getid(messlist[1]))
-                                    await channel.connect()
-                                    embed = discord.Embed(title="Joined voice channel", description=channel.mention, colour=infoguild["color"])
-                                    await message.channel.send(content=None, embed=embed)
-                                except:
-                                    embed = discord.Embed(title="Couldn't join a voice channel", description="Join a voice channel or give a channel to join", colour=infoguild["color"])
-                                    await message.channel.send(content=None, embed=embed)
+                            embed = discord.Embed(title="Could not join voice channel", description="Make sure you are connected to a voice channel that I have access of", colour=infoguild["color"])
+                            await message.channel.send(content=None, embed=embed)
 
                     #leave vc
                     elif messlist[0] == p + "leave" or messlist[0] == p + "yeet" or messlist[0] == p + "fuckoff" or messlist[0] == p + "dc":
@@ -1452,13 +1438,18 @@ class MyClient(discord.Client):
             await message.channel.send("https://cdn.discordapp.com/attachments/761594268405989399/845705313885880391/ezgif.com-gif-maker_28.gif")
         
         #bot being pinged
-        if "847217821917904917>" in message.content:
+        if "782922227397689345>" in message.content:
             await message.channel.send("https://cdn.discordapp.com/emojis/823170480143204383.gif?v=1")
-        
-        #I'm
-        if "i'm" in messlist[0].lower():
-            mention = discord.AllowedMentions(replied_user=False)
-            await message.reply(content=f"Hi {sortname(messlist)} I'm MCBE Bot", allowed_mentions=mention)
+
+        #vc
+        if random.randint(0, 100) == 1 and message.author.voice and not message.guild.voice_client:
+            await message.add_reaction("<:amogus:844296086977249320>")
+            channel = message.author.voice.channel
+            await channel.connect()
+            voice = discord.utils.get(self.voice_clients, guild=message.channel.guild)
+            voice.play(discord.FFmpegPCMAudio("cache/AMOGUS.mp3"))
+            time.sleep(9)
+            await message.guild.voice_client.disconnect()
 
         #everywhere commands (dms + servers)
         if p in messlist[0]:
