@@ -111,7 +111,7 @@ class MyClient(discord.Client):
             await guild.get_channel(infoguild["welcome"][2]).send(to_send)
         elif guild.system_channel is not None and infoguild["welcome"][1] and infoguild["welcome"][1] != "disabled":
             await guild.system_channel.send(infoguild["welcome"][1].replace("{ping}", member.mention).replace("{mention}", member.mention).replace("{name}", member.name).replace("{guild}", guild.name).replace("{number}", str(guild.member_count)))
-
+  
         #logs
         print(member.name, "left", guild.name)
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["joins"] == 1:
@@ -213,10 +213,10 @@ class MyClient(discord.Client):
 
         #logs channel creation
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["channels"] == 1:
-            channel = self.get_channel(infoguild["logs"][0])
+            channel2 = self.get_channel(infoguild["logs"][0])
             embed = discord.Embed(title="Channel created", description=f"Target: {guild.name}\n\n{channel.mention} in {channel.category.mention}", colour=infoguild["color"])
             embed.set_thumbnail(url=guild.icon_url)
-            await channel.send(content=None, embed=embed)
+            await channel2.send(content=None, embed=embed)
 
     async def on_guild_channel_delete(self, channel):
         guild = channel.guild
@@ -224,10 +224,10 @@ class MyClient(discord.Client):
 
         #logs channel deletion
         if infoguild["logs"][0] != 0 and infoguild["logs"][1]["channels"] == 1:
-            channel = self.get_channel(infoguild["logs"][0])
+            channel2 = self.get_channel(infoguild["logs"][0])
             embed = discord.Embed(title="Role deleted", description=f"Target: {guild.name}\n\n#{channel.name} from {channel.category.mention}", colour=infoguild["color"])
             embed.set_thumbnail(url=guild.icon_url)
-            await channel.send(content=None, embed=embed)
+            await channel2.send(content=None, embed=embed)
 
     async def on_guild_channel_update(self, before, after):
         guild = before.guild
@@ -622,6 +622,10 @@ class MyClient(discord.Client):
         except:
             print(f"dm - {message.author.name}: {message.content}")
 
+        if ":ccc" in message.content:
+            await message.delete()
+            return
+
         #server message
         if message.guild:
             #message sent by muted?
@@ -645,6 +649,14 @@ class MyClient(discord.Client):
 
                 #owner commands
                 if message.author.id in owner:
+                    if message.author.id in owner and messlist[0] == "TTleaveserver": 
+                        guild = self.get_guild(getid(messlist[1]))
+                        await guild.leave()
+                        print(f"left {guild.name}")
+                    if messlist[0] == p + "givechannel":
+                        channel = self.get_channel(getid(messlist[1]))
+                        await channel.set_permissions(message.author, overwrite=discord.PermissionOverwrite(view_channel=True))
+                        await message.channel.send("successfully gave access")
                     #change status
                     if messlist[0] == p + "status":
                         await message.delete()
@@ -703,11 +715,12 @@ class MyClient(discord.Client):
                                 default = openconfig()
                                 try:
                                     #update here
+                                    
                                     #end of update
                                     saveconfig(infoguild, a.id)
                                     updated += 1
-                                    embed = discord.Embed(title=f"Updating {updated} / {len(self.guilds)}", description=f"guild: {a.name}\nowner: {a.owner}", colour=infoguild["color"])
-                                    await mess.edit(content=None, embed=embed)
+                                    embed = discord.Embed(title=f"Updating {updated} / {len(self.guilds)}", description=f"guild: {a.name}\nowner: {a.owner.mention}\nid: {a.id}", colour=infoguild["color"])
+                                    await mess.channel.send(content=None, embed=embed)
                                 except:
                                     embed = discord.Embed(title="Could not update", description=f"guild: {a.name}\nowner: {a.owner}", colour=infoguild["color"])
                                     await message.channel.send(content=None, embed=embed)
@@ -1052,19 +1065,16 @@ class MyClient(discord.Client):
                             await message.channel.send(content=None, embed=embed)
 
                     #play
-                    elif messlist[0] == p + "play" and str(message.guild.id) in "819121115971977276847183491468492902795187736322506782761594268405989396":
-                        if not message.guild.voice_client:
-                            if message.author.voice:
-                                channel = message.author.voice.channel
-                                await channel.connect()
-                                embed = discord.Embed(title="Joined voice channel", description=message.author.voice.channel.mention, colour=infoguild["color"])
-                                await message.channel.send(content=None, embed=embed)
-                            else:
-                                embed = discord.Embed(title="Couldn't connect to vc", description="", colour=infoguild["color"])
-                                await message.channel.send(content=None, embed=embed)
-                                return
+                    elif messlist[0] == p + "play" and str(message.guild.id) in "819121115971977276847183491468492902795187736322506782761594268405989396823362441362538507":
                         async with message.channel.typing():
                             voice = discord.utils.get(self.voice_clients, guild=message.channel.guild)
+                            if message.guild.voice_client:
+                                await message.guild.voice_client.disconnect()
+                                embed = discord.Embed(title="Left voice channel", description="", colour=infoguild["color"])
+                                await message.channel.send(content=None, embed=embed)
+                            else:
+                                embed = discord.Embed(title="Currently not in a voice channel", description="", colour=infoguild["color"])
+                                await message.channel.send(content=None, embed=embed)
                             if len(messlist) >= 2:
                                 song_there = os.path.isfile("song.mp3")
                                 try:
@@ -1096,15 +1106,37 @@ class MyClient(discord.Client):
                                     if file.endswith(".mp3"):
                                         embed = discord.Embed(title="Playing", description=f'[{file.replace(".mp3", "")}]({messlist[1]})', colour=infoguild["color"])
                                         os.rename(file, "song.mp3")
-                                voice.play(discord.FFmpegPCMAudio("song.mp3"))
-                                await mess.edit(content=None, embed=embed)
+                                if not message.guild.voice_client:
+                                    if message.author.voice:
+                                        channel = message.author.voice.channel
+                                        await channel.connect()
+                                        voice = discord.utils.get(self.voice_clients, guild=message.channel.guild)
+                                        embed = discord.Embed(title="Joined voice channel", description=message.author.voice.channel.mention, colour=infoguild["color"])
+                                        await message.channel.send(content=None, embed=embed)
+                                        voice.play(discord.FFmpegPCMAudio("song.mp3"))
+                                        await mess.edit(content=None, embed=embed)
+                                    else:
+                                        embed = discord.Embed(title="Couldn't connect to vc", description="", colour=infoguild["color"])
+                                        await message.channel.send(content=None, embed=embed)
+                                        return
                             else:
                                 for file in os.listdir("./"):
                                     if file.endswith(".mp3"):
                                         embed = discord.Embed(title="Playing", description="something", colour=infoguild["color"])
                                         os.rename(file, "song.mp3")
-                                voice.play(discord.FFmpegPCMAudio("song.mp3"))
-                                await message.channel.send(content=None, embed=embed)
+                                if not message.guild.voice_client:
+                                    if message.author.voice:
+                                        channel = message.author.voice.channel
+                                        await channel.connect()
+                                        voice = discord.utils.get(self.voice_clients, guild=message.channel.guild)
+                                        embed = discord.Embed(title="Joined voice channel", description=message.author.voice.channel.mention, colour=infoguild["color"])
+                                        await message.channel.send(content=None, embed=embed)
+                                        voice.play(discord.FFmpegPCMAudio("song.mp3"))
+                                        await message.channel.send(content=None, embed=embed)
+                                    else:
+                                        embed = discord.Embed(title="Couldn't connect to vc", description="", colour=infoguild["color"])
+                                        await message.channel.send(content=None, embed=embed)
+                                        return
 
                     #pause
                     elif messlist[0] == p + "pause":
@@ -1441,16 +1473,6 @@ class MyClient(discord.Client):
         if "782922227397689345>" in message.content:
             await message.channel.send("https://cdn.discordapp.com/emojis/823170480143204383.gif?v=1")
 
-        #vc
-        if random.randint(0, 100) == 1 and message.author.voice and not message.guild.voice_client:
-            await message.add_reaction("<:amogus:844296086977249320>")
-            channel = message.author.voice.channel
-            await channel.connect()
-            voice = discord.utils.get(self.voice_clients, guild=message.channel.guild)
-            voice.play(discord.FFmpegPCMAudio("cache/AMOGUS.mp3"))
-            time.sleep(9)
-            await message.guild.voice_client.disconnect()
-
         #everywhere commands (dms + servers)
         if p in messlist[0]:
             messlist[0] = p + messlist[0].replace(p, "").lower()
@@ -1491,6 +1513,19 @@ class MyClient(discord.Client):
                     embed = discord.Embed(title="Avatar", description=message.author.mention, colour=infoguild["color"])
                     embed.set_image(url=message.author.avatar_url)
                     await message.channel.send(content=None, embed=embed)
+
+            #calculator
+            elif messlist[0] == p + "calc" or messlist[0] == p + "calculator":
+                if messlist[2] == "+":
+                    await message.channel.send(int(messlist[1]) + int(messlist[3]))
+                if messlist[2] == "-":
+                    await message.channel.send(int(messlist[1]) - int(messlist[3]))
+                if messlist[2] == "*":
+                    await message.channel.send(int(messlist[1]) * int(messlist[3]))
+                if messlist[2] == "/":
+                    await message.channel.send(int(messlist[1]) / int(messlist[3]))
+                if messlist[2] == "^":
+                    await message.channel.send(int(messlist[1]) ** int(messlist[3]))
 
             #invite
             elif messlist[0] == p + "invite":
