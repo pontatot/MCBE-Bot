@@ -5,6 +5,7 @@ from keep_alive import keep_alive
 import youtube_dl
 import time
 import random
+import urllib.request, urllib.parse
 
 #load infos
 with open("app.txt") as app_file:
@@ -1516,16 +1517,7 @@ class MyClient(discord.Client):
 
             #calculator
             elif messlist[0] == p + "calc" or messlist[0] == p + "calculator":
-                if messlist[2] == "+":
-                    await message.channel.send(int(messlist[1]) + int(messlist[3]))
-                if messlist[2] == "-":
-                    await message.channel.send(int(messlist[1]) - int(messlist[3]))
-                if messlist[2] == "*":
-                    await message.channel.send(int(messlist[1]) * int(messlist[3]))
-                if messlist[2] == "/":
-                    await message.channel.send(int(messlist[1]) / int(messlist[3]))
-                if messlist[2] == "^":
-                    await message.channel.send(int(messlist[1]) ** int(messlist[3]))
+                await message.channel.send(urllib.request.urlopen("http://api.mathjs.org/v4/?expr=" + urllib.parse.quote_plus(" ".join(messlist[1:]))).read().decode("utf-8"))
 
             #invite
             elif messlist[0] == p + "invite":
