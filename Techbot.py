@@ -5,6 +5,7 @@ from keep_alive import keep_alive
 import youtube_dl
 import time
 import random
+import urllib.request, urllib.parse
 
 #load infos
 with open("app.txt") as app_file:
@@ -29,25 +30,24 @@ def getid(message):
     except:
         return None
 
-#open the guild config
+# open the guild config
 def openconfig(id="default"):
     try:
-        with open(f"guilds/{id}.json", "r", encoding = "utf-8") as help_file:
+        with open(f"guilds/{id}.json", encoding="utf-8") as help_file:
             infoguild = json.load(help_file)
-    except:
-        #initialization
-        with open("guilds/default.json", "r", encoding = "utf-8") as help_file:
+    except FileNotFoundError:
+        # initialization
+        with open("guilds/default.json", encoding="utf-8") as help_file:
             default = json.load(help_file)
         infoguild = default
-        with open(f"guilds/{id}.json", "w", encoding = "utf-8") as help_file:
+        with open(f"guilds/{id}.json", "w", encoding="utf-8") as help_file:
             json.dump(default, help_file)
     return infoguild
 
-#save the guild config
+# save the guild config
 def saveconfig(infoguild, id):
-    f = open(f"guilds/{id}.json", "w", encoding = "utf-8")
-    json.dump(infoguild, f)
-    f.close()
+    with open(f"guilds/{id}.json", "w", encoding="utf-8") as f:
+        json.dump(infoguild, f)
 
 class MyClient(discord.Client):
     async def on_ready(self):
@@ -81,7 +81,7 @@ class MyClient(discord.Client):
             if infoguild["welcome"][0]:
                 to_send = infoguild["welcome"][0].replace("{ping}", member.mention).replace("{mention}", member.mention).replace("{name}", member.name).replace("{guild}", guild.name).replace("{number}", str(guild.member_count))
             else:
-                to_send = 'Welcome {0.mention} to {1.name}!'.format(member, guild)
+                to_send = f'Welcome {member.mention} to {guild.name}!'
             await guild.get_channel(infoguild["welcome"][2]).send(to_send)
         elif guild.system_channel is not None and infoguild["welcome"][0] and infoguild["welcome"][0] != "disabled":
             await guild.system_channel.send(infoguild["welcome"][0].replace("{ping}", member.mention).replace("{mention}", member.mention).replace("{name}", member.name).replace("{guild}", guild.name).replace("{number}", str(guild.member_count)))
@@ -598,28 +598,23 @@ class MyClient(discord.Client):
         prefix = infoguild["prefix"]
         admin = infoguild["admins"]
 
-        #ignore channel
+        # ignore channel
         if message.channel.id in infoguild["blackchannels"]:
             return
 
-        #cut message into list
-        messlist = list(message.content.split(" "))
+        # cut message into list
+        messlist = message.content.split()
 
-        #determine prefix
-        for i in range(len(prefix)):
-            if prefix[i] in messlist[0]:
-                if messlist[0] == str(prefix[i] + messlist[0].split(prefix[i])[1]):
-                    p = prefix[i]
-                    break
-                else:
-                    p = "TT"
-            else:
-                p = "TT"
+        # determine prefix
+        if messlist[0].startswith(prefix):
+            p = prefix
+        else:
+            p = "TT"
 
-        #logs
+        # logs
         try:
             print(f"{message.guild.name} - {message.channel.name} - {message.author.name}: {message.content}")
-        except:
+        except AttributeError:
             print(f"dm - {message.author.name}: {message.content}")
 
         if ":ccc" in message.content:
@@ -1157,25 +1152,25 @@ class MyClient(discord.Client):
                         embed = discord.Embed(title="Stopped", description="", colour=infoguild["color"])
                         await message.channel.send(content=None, embed=embed)
 
-                    #spam (pls don't abuse)
+                    # spam (pls don't abuse)
                     elif messlist[0] == p + "spam":
                         await message.delete()
                         for i in range(int(messlist[1])):
                             await message.channel.send(sortname(messlist, 2))
 
-                    #ghost ping
+                    # ghost ping
                     elif messlist[0] == p + "ghost":
                         await message.channel.send(f"<@{int(messlist[1])}><@&{int(messlist[1])}>")
                         await message.channel.purge(limit=1)
                         await message.delete()
 
-                    #botnick
+                    # botnick
                     elif messlist[0] == p + "botnick":
                         await message.delete()
                         user = message.guild.get_member(self.user.id)
                         await user.edit(nick=sortname(messlist, 1))
 
-                    #custom commands
+                    # custom commands
                     elif messlist[0] == p + "command":
                         if messlist[1] not in infoguild["command"][0]:
                             infoguild["command"][0].append(messlist[1])
@@ -1201,7 +1196,7 @@ class MyClient(discord.Client):
                                     await message.channel.send(content=None, embed=embed)
                                     break
 
-                    #setup
+                    # setup
                     elif messlist[0] == p + "setup":
                         embed = discord.Embed(title="SETUP page", description=f"prefix: {infoguild['prefix']}", colour=infoguild["color"])
                         adminlist = ""
@@ -1242,7 +1237,7 @@ class MyClient(discord.Client):
                         embed.add_field(name="Welcome", value=f'channel: {welcchannel}\nrole: <@&{infoguild["welcome"][2]}>\nwelcome message: {infoguild["welcome"][0]}\nleave message: {infoguild["welcome"][1]}')
                         await message.channel.send(content=None, embed=embed)
 
-                    #resets server config
+                    # resets server config
                     elif messlist[0] == p + "reset":
                         if len(messlist) > 1:
                             default = openconfig()
@@ -1260,43 +1255,42 @@ class MyClient(discord.Client):
                             embed = discord.Embed(title="Successfully reset", description="target: whole confing", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
 
-                    #change embed color, must be a int
+                    # change embed color, must be an int
                     elif messlist[0] == p + "color":
                         try:
-                            if int(messlist[1]) >= 0 and int(messlist[1]) <= 16777215:
-                                infoguild["color"] = int(messlist[1])
-                                saveconfig(infoguild, message.guild.id)
-                                embed = discord.Embed(title="Color has been changed to", description=infoguild['color'], colour=infoguild["color"])
-                                await message.channel.send(content=None, embed=embed)
-                            else:
-                                embed = discord.Embed(title="Invalid color number", description="Make sure to provide an integer from 0 to 16777215", colour=infoguild["color"])
-                                await message.channel.send(content=None, embed=embed)
-                        except:
+                            color = int(messlist[1])
+                            if color < 0 or color > 16777215:
+                                raise ValueError
+                            infoguild["color"] = color
+                            saveconfig(infoguild, message.guild.id)
+                            embed = discord.Embed(title="Color has been changed to", description=color, colour=color)
+                            await message.channel.send(content=None, embed=embed)                            
+                        except ValueError:
                             embed = discord.Embed(title="Invalid color number", description="Make sure to provide an integer from 0 to 16777215", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
 
-                    #adds a prefix
+                    # adds a prefix
                     elif messlist[0] == p + "prefix" and messlist[0] not in infoguild["prefix"]:
                         infoguild["prefix"].append(messlist[1])
                         saveconfig(infoguild, message.guild.id)
                         embed = discord.Embed(title="Added to prefix list", description=messlist[1], colour=infoguild["color"])
                         await message.channel.send(content=None, embed=embed)
 
-                    #removes a prefix
+                    # removes a prefix
                     elif messlist[0] == p + "prefix" and messlist[1] in infoguild["prefix"] and len(infoguild["prefix"]) > 1:
                         infoguild["prefix"].remove(messlist[1])
                         saveconfig(infoguild, message.guild.id)
                         embed = discord.Embed(title="Removed from prefix list", description=messlist[1], colour=infoguild["color"])
                         await message.channel.send(content=None, embed=embed)
 
-                    #adds an admin role
+                    # adds an admin role
                     elif messlist[0] == p + "op":
                         infoguild["admins"].append(int(getid(messlist[1])))
                         saveconfig(infoguild, message.guild.id)
                         embed = discord.Embed(title="Added to admin list", description=f"<@&{getid(messlist[1])}>", colour=infoguild["color"])
                         await message.channel.send(content=None, embed=embed)
 
-                    #removes an admin role
+                    # removes an admin role
                     elif messlist[0] == p + "unop":
                         if getid(messlist[1]) in infoguild["admins"]:
                             infoguild["admins"].remove(getid(messlist[1]))
@@ -1307,7 +1301,7 @@ class MyClient(discord.Client):
                             embed = discord.Embed(title="Invalid admin role", description="Make sure the role is already in the admin list", colour=infoguild["color"])
                             await message.channel.send(content=None, embed=embed)
 
-                    #setup vote
+                    # setup vote
                     elif messlist[0] == p + "setvote":
                         if messlist[1] == "app" or messlist[1] == "application":
                             infoguild["vote"][1] = getid(messlist[2])
@@ -1319,7 +1313,7 @@ class MyClient(discord.Client):
                             await message.channel.send(content=None, embed=embed)
                         saveconfig(infoguild, message.guild.id)
 
-                    #welcome
+                    # welcome
                     elif messlist[0] == p + "welcome":
                         if "<#" in messlist[1]:
                             infoguild["welcome"][3] = getid(messlist[1])
@@ -1342,7 +1336,7 @@ class MyClient(discord.Client):
                             await message.channel.send(content=None, embed=embed)
                             saveconfig(infoguild, message.guild.id)
 
-                    #blacklist
+                    # blacklist
                     elif messlist[0] == p + "blacklist":
                         channel = getid(messlist[1])
                         if channel not in infoguild["blackchannels"]:
@@ -1356,10 +1350,10 @@ class MyClient(discord.Client):
                             await message.channel.send(content=None, embed=embed)
                             saveconfig(infoguild, message.guild.id)
 
-                    #logs
+                    # logs
                     elif messlist[0] == p + "logs" or messlist[0] == p + "log":
                         try:
-                            #channel in which the logs will go
+                            # channel in which the logs will go
                             if messlist[1] == "channel":
                                 try:
                                     infoguild["logs"][0] = getid(messlist[2])
@@ -1370,7 +1364,7 @@ class MyClient(discord.Client):
                                     embed = discord.Embed(title="Could not set log channel", description="Make sure to have input a correct channel or channel id as the second argument", colour=infoguild["color"])
                                     await message.channel.send(content=None, embed=embed)
 
-                            #enable logs
+                            # enable logs
                             elif messlist[1] == "add" or messlist[1] == "enable":
                                 if messlist[2] == "all" or messlist[2] == "everything":
                                     for i in infoguild["logs"][1]:
@@ -1386,7 +1380,7 @@ class MyClient(discord.Client):
                                             embed = discord.Embed(title="Enabled", description=i, colour=infoguild["color"])
                                             await message.channel.send(content=None, embed=embed)
 
-                            #disable logs
+                            # disable logs
                             elif messlist[1] == "remove" or messlist[1] == "disable":
                                 if messlist[2] == "all" or messlist[2] == "everything":
                                     for i in infoguild["logs"][1]:
@@ -1448,7 +1442,7 @@ class MyClient(discord.Client):
                                 embed = discord.Embed(title="Could not setup starboard", description="check the command syntax and my perms", colour=infoguild["color"])
                                 await message.channel.send(content=None, embed=embed)
 
-        #dms
+        # dms
         else:
             if p in messlist[0]:
                 messlist[0] = p + messlist[0].replace(p, "").lower()
@@ -1464,18 +1458,18 @@ class MyClient(discord.Client):
                         embed = discord.Embed(title="", description=sortname(messlist), colour=infoguild["color"])
                     await message.channel.send(content=None, embed=embed)
 
-        #fun
-        #pixel being pinged
+        # fun
+        # pixel being pinged
         if "832240193020624896>" in message.content:
             await message.channel.send("https://cdn.discordapp.com/attachments/761594268405989399/845705313885880391/ezgif.com-gif-maker_28.gif")
         
-        #bot being pinged
-        if "782922227397689345>" in message.content:
+        # bot being pinged
+        if str(self.user.id) + ">" in message.content:
             await message.channel.send("https://cdn.discordapp.com/emojis/823170480143204383.gif?v=1")
 
-        #everywhere commands (dms + servers)
+        # everywhere commands (dms + servers)
         if p in messlist[0]:
-            messlist[0] = p + messlist[0].replace(p, "").lower()
+            messlist[0] = p + messlist[0][len(p):].lower()
 
             #ping
             if messlist[0] == p + "ping":
@@ -1514,18 +1508,9 @@ class MyClient(discord.Client):
                     embed.set_image(url=message.author.avatar_url)
                     await message.channel.send(content=None, embed=embed)
 
-            #calculator
-            elif messlist[0] == p + "calc" or messlist[0] == p + "calculator":
-                if messlist[2] == "+":
-                    await message.channel.send(int(messlist[1]) + int(messlist[3]))
-                if messlist[2] == "-":
-                    await message.channel.send(int(messlist[1]) - int(messlist[3]))
-                if messlist[2] == "*":
-                    await message.channel.send(int(messlist[1]) * int(messlist[3]))
-                if messlist[2] == "/":
-                    await message.channel.send(int(messlist[1]) / int(messlist[3]))
-                if messlist[2] == "^":
-                    await message.channel.send(int(messlist[1]) ** int(messlist[3]))
+            # calculator
+            elif any(messlist[0].endswith(x) for x in ["calc", "calculator"]):
+                await message.channel.send(urllib.request.urlopen("http://api.mathjs.org/v4/?expr=" + urllib.parse.quote_plus(" ".join(messlist[1:]))).read().decode("utf-8"))
 
             #invite
             elif messlist[0] == p + "invite":
